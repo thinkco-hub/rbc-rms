@@ -1,0 +1,238 @@
+Table role {
+  role_id integer [primary key]
+  role_name varchar [not null, unique]
+  description text
+}
+
+Table permission {
+  perm_id integer [primary key]
+  permission_name varchar [not null, unique]
+  description text
+}
+
+Table role_permission {
+  role_id integer [not null]
+  perm_id integer [not null]
+  description text
+
+  indexes {
+    (role_id, perm_id) [pk]
+  }
+}
+
+Table employee {
+  emp_id integer [primary key]
+  role_id integer [not null]
+  first_name varchar [not null]
+  last_name varchar [not null]
+  email varchar [not null, unique]
+  phone varchar
+  status varchar [not null, default: 'active']
+}
+
+Table raw_material {
+  raw_material_id integer [primary key]
+  name varchar [not null]
+  unit varchar [not null]
+  current_stock decimal [not null, default: 0]
+  reorder_threshold decimal [not null, default: 0]
+}
+
+Table cost_layer {
+  cost_layer_id integer [primary key]
+  raw_material_id integer [not null]
+  quantity_remaining decimal [not null]
+  unit_cost decimal [not null]
+  received_date date [not null, default: `current_date`]
+}
+
+Table restock_reminder {
+  restock_reminder_id integer [primary key]
+  raw_material_id integer [not null]
+  quantity_needed decimal [not null]
+  target_date date
+  status varchar [not null, default: 'pending']
+}
+
+Table menu_item {
+  menu_item_id integer [primary key]
+  name varchar [not null]
+  stock_quantity decimal [not null, default: 0]
+  description text
+  unit varchar
+  reorder_threshold decimal [not null, default: 0]
+  selling_price decimal [not null]
+}
+
+Table closing_inventory {
+  closing_inventory_id integer [primary key]
+  menu_item_id integer [not null]
+  emp_id integer
+  inventory_date date [not null]
+  expected_quantity decimal [not null]
+  actual_quantity decimal [not null]
+  discrepancy_quantity decimal [not null]
+  submitted_at timestamp [default: `now()`]
+
+  Note: 'No Pending/Applied/Dismissed workflow field in this version — flagged for confirmation.'
+}
+
+Table recipe {
+  recipe_id integer [primary key]
+  menu_item_id integer [not null]
+}
+
+Table recipe_ingredient {
+  recipe_ingredient_id integer [primary key]
+  recipe_id integer [not null]
+  raw_material_id integer [not null]
+  quantity_required decimal [not null]
+}
+
+Table production_run {
+  production_id integer [primary key]
+  menu_item_id integer [not null]
+  recipe_id integer [not null]
+  emp_id integer
+  planned_quantity decimal [not null]
+  actual_quantity decimal
+  planned_date date [not null]
+  completed_date date
+  status varchar [not null, default: 'scheduled']
+}
+
+Table production_consumption {
+  consumption_id integer [primary key]
+  production_id integer [not null]
+  raw_material_id integer [not null]
+  quantity_consumed decimal [not null]
+  unit_cost decimal [not null]
+  total_cost decimal [not null]
+}
+
+Table client {
+  client_id integer [primary key]
+  name varchar [not null]
+  address varchar
+  contact_info varchar
+}
+
+Table order_record {
+  order_id integer [primary key]
+  client_id integer [not null]
+  status varchar [not null, default: 'pending']
+  requested_delivery_date date
+
+  Note: 'Named order_record here since "order" is a reserved SQL keyword.'
+}
+
+Table order_item {
+  order_item_id integer [primary key]
+  order_id integer [not null]
+  menu_item_id integer [not null]
+  quantity decimal [not null]
+}
+
+Table delivery {
+  delivery_id integer [primary key]
+  order_id integer [not null]
+  scheduled_date date [not null]
+  assigned_staff varchar
+  status varchar [not null, default: 'scheduled']
+}
+
+Table pos_transaction {
+  transaction_id integer [primary key]
+  cashier_id integer
+  order_id integer
+  subtotal decimal [not null]
+  discount_amount decimal [not null, default: 0]
+  total_amount decimal [not null]
+  payment_method varchar [not null]
+  status varchar [not null, default: 'completed']
+  voided_at timestamp
+  refunded_at timestamp
+}
+
+Table pos_transaction_item {
+  transaction_item_id integer [primary key]
+  transaction_id integer [not null]
+  menu_item_id integer [not null]
+  quantity decimal [not null]
+  unit_price decimal [not null]
+  discount_amount decimal [not null, default: 0]
+  line_total decimal [not null]
+  unit_cogs decimal [not null]
+  total_cogs decimal [not null]
+}
+
+Table chams_inventory {
+  chams_inventory_id integer [primary key]
+  name varchar [not null]
+}
+
+Table branch_ledger {
+  branch_ledger_id integer [primary key]
+  branch_id integer [not null, note: 'References chams_inventory.chams_inventory_id — naming mismatch from original diagram']
+  month date [not null]
+  beginning_stock decimal [not null, default: 0]
+  restocked decimal [not null, default: 0]
+  spoilage decimal [not null, default: 0]
+  sold decimal [not null, default: 0]
+  remaining decimal [not null, default: 0]
+  branch_submitted_count decimal
+}
+
+Table expense {
+  expense_id integer [primary key]
+  emp_id integer
+  expense_date date [not null]
+  description text
+  category varchar
+  amount decimal [not null]
+}
+
+Table calendar_event {
+  calendar_event_id integer [primary key]
+  event_type varchar [not null]
+  reference_id integer [not null, note: 'Polymorphic — no enforced FK']
+  google_event_id varchar [not null]
+  status varchar [not null, default: 'active']
+}
+
+// ------------------------------------------------------------
+// Relationships
+// ------------------------------------------------------------
+Ref: role_permission.role_id > role.role_id
+Ref: role_permission.perm_id > permission.perm_id
+Ref: employee.role_id > role.role_id
+
+Ref: cost_layer.raw_material_id > raw_material.raw_material_id
+Ref: restock_reminder.raw_material_id > raw_material.raw_material_id
+
+Ref: closing_inventory.menu_item_id > menu_item.menu_item_id
+Ref: closing_inventory.emp_id > employee.emp_id
+
+Ref: recipe.menu_item_id > menu_item.menu_item_id
+Ref: recipe_ingredient.recipe_id > recipe.recipe_id
+Ref: recipe_ingredient.raw_material_id > raw_material.raw_material_id
+
+Ref: production_run.menu_item_id > menu_item.menu_item_id
+Ref: production_run.recipe_id > recipe.recipe_id
+Ref: production_run.emp_id > employee.emp_id
+Ref: production_consumption.production_id > production_run.production_id
+Ref: production_consumption.raw_material_id > raw_material.raw_material_id
+
+Ref: order_record.client_id > client.client_id
+Ref: order_item.order_id > order_record.order_id
+Ref: order_item.menu_item_id > menu_item.menu_item_id
+Ref: delivery.order_id > order_record.order_id
+
+Ref: pos_transaction.cashier_id > employee.emp_id
+Ref: pos_transaction.order_id > order_record.order_id
+Ref: pos_transaction_item.transaction_id > pos_transaction.transaction_id
+Ref: pos_transaction_item.menu_item_id > menu_item.menu_item_id
+
+Ref: branch_ledger.branch_id > chams_inventory.chams_inventory_id
+
+Ref: expense.emp_id > employee.emp_id

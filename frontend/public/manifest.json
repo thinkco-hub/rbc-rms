@@ -1,0 +1,7 @@
+{
+  "short_name": "Reid's Bakery",
+  "name": "Reid's Bakery HQ",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone"
+}

@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Restores the fade-in entrance animation that was lost when the project
+   migrated to Tailwind CSS v4 (animate-fadeIn is used across the app).
+   Keyframes live inside @theme so Tailwind emits them with the utility.
+   Opacity-only on purpose: a transform here would create a containing block
+   for position:fixed modals rendered inside animated containers. */
+@theme {
+  --animate-fadeIn: fadeIn 0.3s ease-out;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
