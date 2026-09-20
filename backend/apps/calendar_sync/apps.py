@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class CalendarSyncConfig(AppConfig):
-    name = "calendar_sync"
+    name = "apps.calendar_sync"

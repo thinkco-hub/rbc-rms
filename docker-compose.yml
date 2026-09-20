@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rbc_rms
+      POSTGRES_USER: rbc
+      POSTGRES_PASSWORD: rbc
+    ports:
+      - "5432:5432"
+    volumes:
+      - rbc_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  rbc_postgres_data:
