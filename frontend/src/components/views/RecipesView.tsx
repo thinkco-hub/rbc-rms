@@ -42,7 +42,6 @@ export default function RecipesView({
       <RecipeEditor
         recipe={viewingRecipe}
         ingredients={ingredients}
-        menuInventory={menuInventory}
         pricingRules={pricingRules}
         onCancel={onCancelEdit}
         onSave={onSave}

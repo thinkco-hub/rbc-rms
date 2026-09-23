@@ -111,7 +111,7 @@ export default function ProductionRunsList({
         <RunDetailModal
           run={selectedModalEntry.run}
           recipe={selectedModalEntry.recipe}
-          menuItem={menuInventory.find((m) => m.id === selectedModalEntry.recipe.menuItemId)}
+          menuItem={menuInventory.find((m) => m.id === selectedModalEntry.recipe.id)}
           ingredients={ingredients}
           onClose={() => setSelectedRunId(null)}
           onComplete={handleComplete}
@@ -173,7 +173,7 @@ export default function ProductionRunsList({
                 <table className="w-full text-left border-collapse min-w-[720px]">
                   <tbody className="divide-y divide-gray-100 text-sm">
                     {group.entries.map(({ run, recipe, status }) => {
-                      const menuItem = recipe ? menuInventory.find((m) => m.id === recipe.menuItemId) : null;
+                      const menuItem = recipe ? menuInventory.find((m) => m.id === recipe.id) : null;
                       return (
                         <tr key={run.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-5 py-4 font-medium text-gray-900">{recipe ? recipe.name : "—"}</td>

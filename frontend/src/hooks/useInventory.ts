@@ -1,9 +1,9 @@
 import { useState } from "react";
 import {
   initialIngredients,
-  initialMenuInventory,
   initialRestockReminders,
 } from "../data/initialInventory";
+import { initialRecipes } from "../data/initialRecipes";
 import type {
   IngredientFormData,
   IngredientId,
@@ -47,7 +47,7 @@ const nextReminderId = (): RestockReminderId =>
  * stock-movement actions below so the stock collections have a single owner.
  */
 export function useInventory() {
-  const [menuInventory, setMenuInventory] = useState<MenuItemStock[]>(initialMenuInventory);
+  const [menuInventory, setMenuInventory] = useState<MenuItemStock[]>(initialRecipes);
   const [ingredients, setIngredients] = useState<IngredientStock[]>(initialIngredients);
   const [restockReminders, setRestockReminders] = useState<RestockReminder[]>(initialRestockReminders);
   const [restockModal, setRestockModal] = useState<RestockModalState>(EMPTY_RESTOCK_MODAL);

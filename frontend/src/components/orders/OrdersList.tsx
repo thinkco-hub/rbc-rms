@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import CreateOrderModal from "./CreateOrderModal";
+import OrderCardList from "./OrderCardList";
 import OrderStatusBadge from "./OrderStatusBadge";
 import PaymentStatusBadge from "./PaymentStatusBadge";
 import { SearchIcon } from "../icons";
@@ -129,7 +130,10 @@ export default function OrdersList({ orders, clients, menuInventory, onCreate, o
         })}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Container-query breakpoint: below 1024px the table swaps to a card list. */}
+      <div className="@container">
+        {/* Desktop table — original structure and styling preserved; hidden only at <1024px container width. */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden @max-[1024px]:hidden">
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse min-w-[1040px]">
             <thead>
@@ -205,6 +209,10 @@ export default function OrdersList({ orders, clients, menuInventory, onCreate, o
             </tbody>
           </table>
         </div>
+        </div>
+
+        {/* Tablet/mobile (<1024px container): stacked card list with accordion + bottom sheet. */}
+        <OrderCardList orders={filtered} menuInventory={menuInventory} getClientName={clientName} onView={onView} />
       </div>
     </div>
   );

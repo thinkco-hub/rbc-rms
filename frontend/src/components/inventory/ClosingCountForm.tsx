@@ -68,9 +68,10 @@ interface ClosingCountFormProps {
   menuInventory: MenuItemStock[];
   ingredients: IngredientStock[];
   onSubmit: (submission: ClosingCountSubmission) => void;
+  onBack: () => void;
 }
 
-export default function ClosingCountForm({ menuInventory, ingredients, onSubmit }: ClosingCountFormProps) {
+export default function ClosingCountForm({ menuInventory, ingredients, onSubmit, onBack }: ClosingCountFormProps) {
   const [date, setDate] = useState(today());
   const [menuCounts, setMenuCounts] = useState<CountMap>({});
   const [ingredientCounts, setIngredientCounts] = useState<CountMap>({});
@@ -113,6 +114,16 @@ export default function ClosingCountForm({ menuInventory, ingredients, onSubmit 
 
   return (
     <div className="max-w-4xl mx-auto animate-fadeIn pb-10 w-full">
+      <button
+        onClick={onBack}
+        className="inline-flex items-center gap-2 mb-4 text-sm font-semibold text-[#562D07]/70 hover:text-[#562D07] transition-colors"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Inventory
+      </button>
+
       <header className="mb-6 md:mb-8">
         <h2 className="text-2xl md:text-3xl font-bold text-[#562D07]">Closing Inventory Count</h2>
         <p className="text-[#562D07]/70 mt-1 font-medium text-sm md:text-base">

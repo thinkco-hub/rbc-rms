@@ -1,8 +1,11 @@
-import type { AppView, NavTabId } from "../../types/domain";
+import { useState } from "react";
+import type { AppView, NavTabId, User } from "../../types/domain";
 import type { Dispatch, SetStateAction } from "react";
 
 interface SidebarProps {
   activeTab: NavTabId;
+  currentUser: User;
+  onLogout: () => void;
   windowWidth: number;
   isMobileOpen: boolean;
   isTabletSidebarOpen: boolean;
@@ -14,10 +17,17 @@ interface SidebarProps {
   setIsReportsExpanded: Dispatch<SetStateAction<boolean>>;
   onNavClick: (tab: NavTabId) => void;
   onSwitchView: (view: AppView) => void;
+  /** Whether the signed-in user is an admin (admin UX is TBD). */
+  isAdmin: boolean;
 }
+
+/** Width (px) of the collapsed sidebar rail = desktop hover zone (Tailwind w-20). */
+const COLLAPSED_RAIL_PX = 80;
 
 export default function Sidebar({
   activeTab,
+  currentUser,
+  onLogout,
   windowWidth,
   isMobileOpen,
   isTabletSidebarOpen,
@@ -29,6 +39,7 @@ export default function Sidebar({
   setIsReportsExpanded,
   onNavClick,
   onSwitchView,
+  isAdmin,
 }: SidebarProps) {
   // --- SIDEBAR RESPONSIVE HELPERS ---
   // "Tablet" = md..lg range (768px - 1023px), same cutoff the POS cart width uses.
@@ -36,11 +47,22 @@ export default function Sidebar({
   const isTablet = windowWidth >= 768 && windowWidth < 1024;
   const sidebarExpanded = isTablet && isTabletSidebarOpen;
 
+  // Desktop (lg+): expand ONLY while the cursor is within the collapsed rail's
+  // 80px width. Hovering the expanded part of the rail collapses it again, so
+  // the rail can never "trap" the cursor and cover content sitting right next
+  // to it (e.g. the POS category chips near the left edge).
+  const isDesktop = windowWidth >= 1024;
+  const [isDesktopRailHovered, setIsDesktopRailHovered] = useState(false);
+  const desktopRailExpanded = isDesktop && isDesktopRailHovered;
+
   // Shared class for sidebar labels/chevrons: visible while the tablet rail is
-  // expanded (click) or on desktop hover; hidden on the collapsed tablet rail.
+  // expanded (click), while the desktop rail is hover-expanded, or on desktop
+  // hover; hidden on the collapsed tablet rail.
   const sidebarLabelCls = sidebarExpanded
     ? "opacity-100"
-    : "opacity-100 md:opacity-0 lg:group-hover:opacity-100";
+    : desktopRailExpanded
+      ? "opacity-100"
+      : "opacity-100 md:opacity-0 lg:opacity-0";
 
   return (
     <>
@@ -62,6 +84,14 @@ export default function Sidebar({
 
       {/* SIDEBAR */}
       <aside
+        onMouseMove={(e) => {
+          if (!isDesktop) return;
+          // Expand only while the cursor is inside the collapsed rail's 80px.
+          setIsDesktopRailHovered(e.clientX < COLLAPSED_RAIL_PX);
+        }}
+        onMouseLeave={() => {
+          if (isDesktop) setIsDesktopRailHovered(false);
+        }}
         onClick={(e) => {
           if (!isTablet) return;
           // When expanded, only bare spots toggle the rail — button taps keep working
@@ -69,17 +99,25 @@ export default function Sidebar({
           setIsTabletSidebarOpen((prev) => !prev);
         }}
         className={`
-        fixed md:relative inset-y-0 left-0 z-50 
+        fixed md:relative inset-y-0 left-0 z-50
         transform ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 
-        w-64 ${sidebarExpanded ? "md:w-64" : "md:w-20"} lg:hover:w-64 
-        transition-all duration-300 ease-in-out 
-        bg-[#562D07] text-[#FDF9F3] flex flex-col shadow-2xl group
+        } md:translate-x-0
+        w-64 ${sidebarExpanded ? "md:w-64" : "md:w-20"} ${
+          desktopRailExpanded
+            ? // Expanded = overlay so content never shifts; smooth 300ms growth
+              "lg:w-64 lg:absolute"
+            : // Collapsed = quick 150ms ease-back so the rail doesn't linger
+              // over the POS chips after the cursor crosses the 80px line,
+              // while still animating smoothly instead of snapping shut
+              "lg:w-20 lg:duration-150"
+        }
+        transition-all duration-300 ease-in-out
+        bg-[#562D07] text-[#FDF9F3] flex flex-col shadow-2xl
       `}
       >
         {/* Brand Area */}
-        <div className="p-5 border-b border-[#F3B978]/20 flex justify-between items-center whitespace-nowrap md:h-[76px]">
+        <div className="p-5 border-b border-[#F3B978]/20 flex justify-between items-center whitespace-nowrap md:h-[76px] overflow-hidden">
           <button
             onClick={() => onSwitchView("chams")}
             className="flex items-center"
@@ -210,12 +248,17 @@ export default function Sidebar({
           <div className="flex flex-col">
             <button
               onClick={() => {
-                setIsInventoryExpanded(!isInventoryExpanded);
-                // First tap on the collapsed tablet rail expands it so the submenu is visible
-                if (isTablet && !sidebarExpanded) setIsTabletSidebarOpen(true);
+                if (isAdmin) {
+                  // Admins: first click expands the submenu (Reconciliation);
+                  // the main view stays reachable via the item itself below.
+                  setIsInventoryExpanded(!isInventoryExpanded);
+                  // First tap on the collapsed tablet rail expands it so the submenu is visible
+                  if (isTablet && !sidebarExpanded) setIsTabletSidebarOpen(true);
+                }
+                onNavClick("inventory");
               }}
               className={`w-full flex justify-between items-center p-3 rounded-lg font-bold transition-colors whitespace-nowrap overflow-hidden ${
-                activeTab.startsWith("inventory")
+                activeTab === "inventory" || activeTab === "inventory-closing-count" || activeTab === "inventory-reconciliation"
                   ? "bg-[#F3B978]/20 text-white shadow-md border-l-4 border-[#F17D0C]"
                   : "text-[#FDF9F3]/60 hover:bg-[#F3B978]/10 hover:text-white border-l-4 border-transparent"
               }`}
@@ -234,69 +277,36 @@ export default function Sidebar({
                   Inventory
                 </span>
               </div>
-              <svg
-                className={`w-4 h-4 ml-2 transition-transform duration-200 ${
-                  isInventoryExpanded ? "rotate-180" : ""
-                } ${sidebarLabelCls}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              {isAdmin && (
+                <svg
+                  onClick={(e) => {
+                    // Chevron tap toggles the submenu without navigating
+                    e.stopPropagation();
+                    setIsInventoryExpanded(!isInventoryExpanded);
+                  }}
+                  className={`w-4 h-4 ml-2 transition-transform duration-200 ${
+                    isInventoryExpanded ? "rotate-180" : ""
+                  } ${sidebarLabelCls}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              )}
             </button>
 
-            {isInventoryExpanded && (
+            {isAdmin && isInventoryExpanded && (
               <div
                 className={`mt-1 space-y-1 bg-[#4a2605] rounded-lg overflow-hidden transition-all shadow-inner ${
                   sidebarExpanded ? "md:block" : "md:hidden"
-                } md:group-hover:block`}
+                } ${desktopRailExpanded ? "lg:block" : "lg:hidden"}`}
               >
-                <button
-                  onClick={() => onNavClick("inventory-menu")}
-                  className={`w-full text-left pl-14 py-2.5 text-sm font-medium transition-colors ${
-                    activeTab === "inventory-menu"
-                      ? "text-[#F17D0C] bg-[#3a1d04] border-l-2 border-[#F17D0C]"
-                      : "text-[#FDF9F3]/70 hover:text-white hover:bg-[#3a1d04] border-l-2 border-transparent"
-                  }`}
-                >
-                  Menu Items
-                </button>
-                <button
-                  onClick={() => onNavClick("inventory-ingredients")}
-                  className={`w-full text-left pl-14 py-2.5 text-sm font-medium transition-colors ${
-                    activeTab === "inventory-ingredients"
-                      ? "text-[#F17D0C] bg-[#3a1d04] border-l-2 border-[#F17D0C]"
-                      : "text-[#FDF9F3]/70 hover:text-white hover:bg-[#3a1d04] border-l-2 border-transparent"
-                  }`}
-                >
-                  Raw Materials
-                </button>
-                <button
-                  onClick={() => onNavClick("inventory-restock")}
-                  className={`w-full text-left pl-14 py-2.5 text-sm font-medium transition-colors ${
-                    activeTab === "inventory-restock"
-                      ? "text-[#F17D0C] bg-[#3a1d04] border-l-2 border-[#F17D0C]"
-                      : "text-[#FDF9F3]/70 hover:text-white hover:bg-[#3a1d04] border-l-2 border-transparent"
-                  }`}
-                >
-                  Restock Reminders
-                </button>
-                <button
-                  onClick={() => onNavClick("inventory-closing-count")}
-                  className={`w-full text-left pl-14 py-2.5 text-sm font-medium transition-colors ${
-                    activeTab === "inventory-closing-count"
-                      ? "text-[#F17D0C] bg-[#3a1d04] border-l-2 border-[#F17D0C]"
-                      : "text-[#FDF9F3]/70 hover:text-white hover:bg-[#3a1d04] border-l-2 border-transparent"
-                  }`}
-                >
-                  Closing Count
-                </button>
                 <button
                   onClick={() => onNavClick("inventory-reconciliation")}
                   className={`w-full text-left pl-14 py-2.5 text-sm font-medium transition-colors ${
@@ -419,7 +429,7 @@ export default function Sidebar({
               <div
                 className={`mt-1 space-y-1 bg-[#4a2605] rounded-lg overflow-hidden transition-all shadow-inner ${
                   sidebarExpanded ? "md:block" : "md:hidden"
-                } md:group-hover:block`}
+                } ${desktopRailExpanded ? "lg:block" : "lg:hidden"}`}
               >
                 <button
                   onClick={() => onNavClick("reports-dashboard")}
@@ -458,7 +468,16 @@ export default function Sidebar({
 
         {/* Bottom Logout Area */}
         <div className="p-3 mb-4 mt-auto border-t border-[#F3B978]/20 pt-4">
-          <button className="w-full flex items-center p-3 rounded-lg font-bold text-[#FDF9F3]/60 hover:text-white hover:bg-[#F3B978]/10 transition-colors whitespace-nowrap overflow-hidden">
+          <div
+            className={`px-3 mb-2 overflow-hidden whitespace-nowrap ${sidebarLabelCls} transition-opacity duration-300`}
+          >
+            <p className="text-sm font-bold text-white truncate">{currentUser.name}</p>
+            <p className="text-xs text-[#FDF9F3]/50 truncate">{currentUser.email}</p>
+          </div>
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center p-3 rounded-lg font-bold text-[#FDF9F3]/60 hover:text-white hover:bg-[#F3B978]/10 transition-colors whitespace-nowrap overflow-hidden"
+          >
             <div className="flex items-center justify-center w-8 flex-shrink-0">
               <svg
                 className="w-6 h-6"

@@ -19,6 +19,7 @@ export type InventoryCountId = string;
 export type SaleId = string;
 export type ExpenseId = string;
 export type DayClosingId = string;
+export type UserId = string;
 
 // ---------- Dates & quantities ----------
 /** Calendar date in "YYYY-MM-DD" form. */
@@ -47,6 +48,8 @@ export type CountResolution = "match" | "applied" | "dismissed";
 /** Reconciliation action on a flagged count. */
 export type CountResolutionAction = "apply" | "dismiss";
 export type PosCategory = "All" | "Pastries" | "Bread" | "Cakes" | "Drinks";
+/** A single item's category — excludes the "All" filter-only value. */
+export type PosItemCategory = Exclude<PosCategory, "All">;
 
 // ---------- Inventory ----------
 export interface MenuItemStock {
@@ -198,12 +201,10 @@ export interface RecipeIngredientLine {
   unit: string;
 }
 
-export interface Recipe {
-  id: RecipeId;
-  menuItemId: MenuItemId;
-  name: string;
-  yieldQty: number;
-  yieldUnit: string;
+export interface Recipe extends MenuItemStock {
+  category: PosItemCategory;
+  yieldQty?: number;
+  yieldUnit?: string;
   ingredients: RecipeIngredientLine[];
 }
 
@@ -290,6 +291,25 @@ export interface DayClosing {
 /** Payload of the close-day action (EndOfDayClosing). */
 export type DayClosingData = Omit<DayClosing, "id" | "closedAt">;
 
+// ---------- Users / Auth ----------
+export type UserRole = "admin" | "staff";
+
+export interface User {
+  id: UserId;
+  name: string;
+  email: string;
+  passwordHash: string;
+  role: UserRole;
+  active: boolean;
+  createdAt: ISODateTime;
+}
+
+/** Payload of the login form (LoginPage). */
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
 // ---------- Navigation ----------
 /** Fixed tab identifiers used by the sidebar and feature views. */
 export type NavTabId =
@@ -297,9 +317,7 @@ export type NavTabId =
   | "pos"
   | "orders"
   | "clients"
-  | "inventory-menu"
-  | "inventory-ingredients"
-  | "inventory-restock"
+  | "inventory"
   | "inventory-closing-count"
   | "inventory-reconciliation"
   | "recipes"
@@ -312,9 +330,7 @@ export type NavTabId =
 // ---------- Derived / computed values (utils) ----------
 /** Tabs rendered by the inventory feature view. */
 export type InventoryTabId =
-  | "inventory-menu"
-  | "inventory-ingredients"
-  | "inventory-restock"
+  | "inventory"
   | "inventory-closing-count"
   | "inventory-reconciliation";
 

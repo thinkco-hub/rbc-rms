@@ -1,11 +1,16 @@
 import type { Recipe } from "../types/domain";
 
-// Seed recipes / bills of materials (FR-2.x) — extracted from App.jsx (§7 Phase 4)
+// Seed recipes / menu items (FR-1.1, FR-2.x) — a recipe IS the sellable/inventory item.
 export const initialRecipes: Recipe[] = [
   {
-    id: "REC-01",
-    menuItemId: "B-101",
+    id: "B-101",
     name: "Butter Croissants",
+    type: "Menu Item",
+    category: "Pastries",
+    price: 120,
+    qty: 280,
+    target: 300,
+    shelfLife: "24 Hours",
     yieldQty: 30,
     yieldUnit: "pcs",
     ingredients: [
@@ -16,9 +21,14 @@ export const initialRecipes: Recipe[] = [
     ],
   },
   {
-    id: "REC-02",
-    menuItemId: "B-102",
+    id: "B-102",
     name: "Almond Croissants",
+    type: "Menu Item",
+    category: "Pastries",
+    price: 150,
+    qty: 150,
+    target: 150,
+    shelfLife: "24 Hours",
     yieldQty: 20,
     yieldUnit: "pcs",
     ingredients: [
@@ -26,5 +36,27 @@ export const initialRecipes: Recipe[] = [
       { ingredientId: "ING-03", qty: 1.5, unit: "kg" },
       { ingredientId: "ING-02", qty: 1, unit: "kg" },
     ],
+  },
+  {
+    id: "L-044",
+    name: "Sourdough Loaves",
+    type: "Menu Item",
+    category: "Bread",
+    price: 200,
+    qty: 15,
+    target: 50,
+    shelfLife: "48 Hours",
+    ingredients: [],
+  },
+  {
+    id: "M-201",
+    name: "Blueberry Muffins",
+    type: "Menu Item",
+    category: "Pastries",
+    price: 95,
+    qty: 360,
+    target: 360,
+    shelfLife: "36 Hours",
+    ingredients: [],
   },
 ];

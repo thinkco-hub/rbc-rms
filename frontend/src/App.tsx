@@ -1,5 +1,6 @@
 import React from "react";
 import ChamsStockLedger from "./components/chams/ChamsStockLedger";
+import LoginPage from "./components/auth/LoginPage";
 import Sidebar from "./components/layout/Sidebar";
 import MobileTopBar from "./components/layout/MobileTopBar";
 import OrderConfirmationModal from "./components/pos/OrderConfirmationModal";
@@ -23,9 +24,13 @@ import { useProduction } from "./hooks/useProduction";
 import { useOrders } from "./hooks/useOrders";
 import { useClosing } from "./hooks/useClosing";
 import { usePos } from "./hooks/usePos";
+import { useAuth } from "./hooks/useAuth";
 import type { NavTabId, Order } from "./types/domain";
 
 export default function BakeryCommandCenter() {
+  // --- AUTH (src/hooks/useAuth.ts) ---
+  const { currentUser, login, logout, getLockedUntil } = useAuth();
+
   // --- NAVIGATION (src/hooks/useNavigation.ts) ---
   const {
     activeView,
@@ -42,6 +47,9 @@ export default function BakeryCommandCenter() {
     setIsReportsExpanded,
     windowWidth,
   } = useNavigation();
+
+  // --- ROLE (TBD: real auth/session; placeholder so admin-only UI can render) ---
+  const [isAdmin] = React.useState(true);
 
   // --- INVENTORY (src/hooks/useInventory.ts) ---
   const inventory = useInventory();
@@ -186,6 +194,10 @@ export default function BakeryCommandCenter() {
     clearViewingOrder();
   };
 
+  if (!currentUser) {
+    return <LoginPage onLogin={login} getLockedUntil={getLockedUntil} />;
+  }
+
   return (
     <div
       className={`flex flex-col md:flex-row h-screen bg-[#FDF9F3] font-sans text-[#121212] overflow-hidden relative ${
@@ -242,6 +254,8 @@ export default function BakeryCommandCenter() {
       {/* SIDEBAR (extracted to src/components/layout/Sidebar.tsx) */}
       <Sidebar
         activeTab={activeTab}
+        currentUser={currentUser}
+        onLogout={logout}
         windowWidth={windowWidth}
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={setIsMobileOpen}
@@ -251,6 +265,7 @@ export default function BakeryCommandCenter() {
         setIsInventoryExpanded={setIsInventoryExpanded}
         isReportsExpanded={isReportsExpanded}
         setIsReportsExpanded={setIsReportsExpanded}
+        isAdmin={isAdmin}
         onNavClick={handleNavClick}
         onSwitchView={() => setActiveView("chams")}
       />
@@ -343,9 +358,7 @@ export default function BakeryCommandCenter() {
             VIEW: INVENTORY
         ========================================= */}
         {(
-          activeTab === "inventory-menu" ||
-          activeTab === "inventory-ingredients" ||
-          activeTab === "inventory-restock" ||
+          activeTab === "inventory" ||
           activeTab === "inventory-closing-count" ||
           activeTab === "inventory-reconciliation"
         ) && (
@@ -355,6 +368,7 @@ export default function BakeryCommandCenter() {
             ingredients={ingredients}
             restockReminders={restockReminders}
             inventoryCounts={inventoryCounts}
+            onNavClick={handleNavClick}
             onRestockToProduction={goToProductionRuns}
             onOpenRestock={openRestock}
             onAddIngredient={addIngredient}

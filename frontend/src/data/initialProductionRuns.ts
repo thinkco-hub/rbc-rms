@@ -4,7 +4,7 @@ import type { ProductionRun } from "../types/domain";
 export const initialProductionRuns: ProductionRun[] = [
   {
     id: "PR-001",
-    recipeId: "REC-01",
+    recipeId: "B-101",
     plannedQty: 60,
     plannedDate: "2026-08-24",
     notes: "",
@@ -13,7 +13,7 @@ export const initialProductionRuns: ProductionRun[] = [
   },
   {
     id: "PR-002",
-    recipeId: "REC-02",
+    recipeId: "B-102",
     plannedQty: 40,
     plannedDate: "2026-08-25",
     notes: "For weekend catering order",

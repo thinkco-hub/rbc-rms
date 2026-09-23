@@ -16,4 +16,19 @@
       opacity: 1;
     }
   }
+
+  /* Bottom-sheet entrance (OrderCardList). The transform is applied to the
+     sheet element itself — an absolutely-positioned child of a fixed overlay
+     with no fixed descendants — so it cannot break fixed positioning the way
+     a transform on an animated ancestor would. */
+  --animate-slideUp: slideUp 0.3s ease-out;
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
 }

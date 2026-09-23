@@ -56,7 +56,7 @@ export function useProduction({
     const actualYield = batches * (Number(recipe.yieldQty) || 0);
 
     deductRecipeLines(recipe.ingredients, batches);
-    addMenuStock(recipe.menuItemId, actualYield);
+    addMenuStock(recipe.id, actualYield);
 
     setProductionRuns((prev) =>
       prev.map((r) =>

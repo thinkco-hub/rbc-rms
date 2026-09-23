@@ -104,16 +104,22 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
 
         <div className="flex gap-3 print:hidden">
           <button
-            onClick={() => window.print()}
+            onClick={onClose}
             className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition-colors"
           >
-            Print Receipt
+            Exit
           </button>
           <button
-            onClick={onClose}
+            onClick={async () => {
+              // Lazy-load jsPDF so it stays out of the initial bundle.
+              const { downloadReceiptPdf } = await import(
+                "../../utils/receiptPdf"
+              );
+              downloadReceiptPdf(receipt);
+            }}
             className="flex-1 py-3 rounded-xl text-white font-bold bg-[#F17D0C] hover:bg-[#d86b06] transition-colors"
           >
-            New Sale
+            Download Receipt
           </button>
         </div>
       </div>

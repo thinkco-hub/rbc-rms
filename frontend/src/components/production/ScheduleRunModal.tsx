@@ -24,7 +24,7 @@ export default function ScheduleRunModal({ recipes, onClose, onSchedule }: Sched
   const qtyNum = parseFloat(form.qty) || 0;
   const isBatchMode = form.qtyUnit === "batch";
   const batches = recipe ? (isBatchMode ? qtyNum : computeBatches(qtyNum, recipe)) : 0;
-  const plannedQtyUnits = recipe ? (isBatchMode ? batches * recipe.yieldQty : qtyNum) : 0;
+  const plannedQtyUnits = recipe ? (isBatchMode ? batches * (recipe.yieldQty || 1) : qtyNum) : 0;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();

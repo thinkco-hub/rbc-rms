@@ -87,9 +87,9 @@ export default function RecipesList({
                 recipes.map((recipe) => {
                   const { costPerUnit } = computeRecipeCost(recipe, ingredients);
                   const price = suggestedPrice(costPerUnit, pricingRules.targetMarginPercent);
-                  const menuItem = menuInventory.find((m) => m.id === recipe.menuItemId);
-                  const actualPrice = menuItem?.price;
-                  const delta = typeof actualPrice === "number" ? actualPrice - price : 0;
+                  const menuItem = menuInventory.find((m) => m.id === recipe.id);
+                  const actualPrice = recipe.price;
+                  const delta = actualPrice - price;
                   return (
                     <tr key={recipe.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4 font-medium text-gray-900">{recipe.name}</td>
@@ -104,23 +104,19 @@ export default function RecipesList({
                         ₱{price.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {typeof actualPrice === "number" ? (
-                          <div>
-                            <span className="font-bold text-gray-900">₱{actualPrice.toFixed(2)}</span>
-                            <span
-                              className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${
-                                delta >= 0
-                                  ? "bg-green-50 text-green-600"
-                                  : "bg-red-50 text-red-600"
-                              }`}
-                            >
-                              {delta >= 0 ? "+" : ""}
-                              ₱{delta.toFixed(2)}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
+                        <div>
+                          <span className="font-bold text-gray-900">₱{actualPrice.toFixed(2)}</span>
+                          <span
+                            className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${
+                              delta >= 0
+                                ? "bg-green-50 text-green-600"
+                                : "bg-red-50 text-red-600"
+                            }`}
+                          >
+                            {delta >= 0 ? "+" : ""}
+                            ₱{delta.toFixed(2)}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-4 text-center">
                         <button

@@ -1,49 +1,8 @@
 import type {
   IngredientStock,
   InventoryCount,
-  MenuItemStock,
   RestockReminder,
 } from "../types/domain";
-
-// Seed menu item stock (FR-1.1) — extracted from App.jsx (§7 Phase 4)
-export const initialMenuInventory: MenuItemStock[] = [
-  {
-    id: "B-101",
-    name: "Butter Croissants",
-    qty: 280,
-    target: 300,
-    shelfLife: "24 Hours",
-    type: "Menu Item",
-    price: 120,
-  },
-  {
-    id: "B-102",
-    name: "Almond Croissants",
-    qty: 150,
-    target: 150,
-    shelfLife: "24 Hours",
-    type: "Menu Item",
-    price: 150,
-  },
-  {
-    id: "L-044",
-    name: "Sourdough Loaves",
-    qty: 15,
-    target: 50,
-    shelfLife: "48 Hours",
-    type: "Menu Item",
-    price: 200,
-  },
-  {
-    id: "M-201",
-    name: "Blueberry Muffins",
-    qty: 360,
-    target: 360,
-    shelfLife: "36 Hours",
-    type: "Menu Item",
-    price: 95,
-  },
-];
 
 // Seed raw ingredient stock (FR-1.1)
 export const initialIngredients: IngredientStock[] = [
