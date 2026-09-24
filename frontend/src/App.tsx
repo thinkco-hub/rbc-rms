@@ -25,12 +25,31 @@ import { useOrders } from "./hooks/useOrders";
 import { useClosing } from "./hooks/useClosing";
 import { usePos } from "./hooks/usePos";
 import { useAuth } from "./hooks/useAuth";
-import type { NavTabId, Order } from "./types/domain";
+import { useAccounts } from "./hooks/useAccounts";
+import AccountsView from "./components/views/AccountsView";
+import type { NavTabId, Order, User } from "./types/domain";
 
+/**
+ * Owns login/logout only. The rest of the app (all its data-fetching hooks —
+ * useInventory, useRecipes, useAccounts, etc. — call their APIs once on
+ * mount) lives in AppShell, keyed by user id so it mounts fresh right after
+ * login instead of having already fired its fetches while logged out.
+ */
 export default function BakeryCommandCenter() {
-  // --- AUTH (src/hooks/useAuth.ts) ---
-  const { currentUser, login, logout, getLockedUntil } = useAuth();
+  const { currentUser, isRestoring, login, logout, getLockedUntil } = useAuth();
 
+  if (isRestoring) {
+    return null;
+  }
+
+  if (!currentUser) {
+    return <LoginPage onLogin={login} getLockedUntil={getLockedUntil} />;
+  }
+
+  return <AppShell key={currentUser.id} currentUser={currentUser} onLogout={logout} />;
+}
+
+function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogout: () => void }) {
   // --- NAVIGATION (src/hooks/useNavigation.ts) ---
   const {
     activeView,
@@ -48,8 +67,26 @@ export default function BakeryCommandCenter() {
     windowWidth,
   } = useNavigation();
 
-  // --- ROLE (TBD: real auth/session; placeholder so admin-only UI can render) ---
-  const [isAdmin] = React.useState(true);
+  // --- ROLE ---
+  // Client-side only for UX (hiding nav items); the server enforces the
+  // real boundary per-module (see apps.accounts.permissions.HasPermissionCode).
+  const isAdmin = currentUser?.role === "Owner" || currentUser?.role === "Admin";
+
+  // --- ACCOUNTS (src/hooks/useAccounts.ts, FR-3.10.1) ---
+  const accountsState = useAccounts(isAdmin);
+  const {
+    accounts,
+    roles: accountRoles,
+    isLoading: isAccountsLoading,
+    error: accountsError,
+    editingAccount,
+    setEditingAccount,
+    isCreatingAccount,
+    setIsCreatingAccount,
+    saveAccount,
+    setAccountActive,
+    cancelAccountEdit,
+  } = accountsState;
 
   // --- INVENTORY (src/hooks/useInventory.ts) ---
   const inventory = useInventory();
@@ -193,10 +230,6 @@ export default function BakeryCommandCenter() {
     setActiveTab("production-runs");
     clearViewingOrder();
   };
-
-  if (!currentUser) {
-    return <LoginPage onLogin={login} getLockedUntil={getLockedUntil} />;
-  }
 
   return (
     <div
@@ -440,6 +473,25 @@ export default function BakeryCommandCenter() {
             menuInventory={menuInventory}
             ingredients={ingredients}
             inventoryCounts={inventoryCounts}
+          />
+        )}
+
+        {/* =========================================
+            VIEW: USER ACCOUNTS (FR-3.10.1)
+        ========================================= */}
+        {activeTab === "accounts" && isAdmin && (
+          <AccountsView
+            accounts={accounts}
+            roles={accountRoles}
+            isLoading={isAccountsLoading}
+            error={accountsError}
+            editingAccount={editingAccount}
+            isCreatingAccount={isCreatingAccount}
+            onEdit={setEditingAccount}
+            onCreate={() => setIsCreatingAccount(true)}
+            onCancelEdit={cancelAccountEdit}
+            onSave={saveAccount}
+            onSetActive={setAccountActive}
           />
         )}
       </main>

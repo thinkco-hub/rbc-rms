@@ -464,6 +464,31 @@ export default function Sidebar({
               </div>
             )}
           </div>
+
+          {isAdmin && (
+            <button
+              onClick={() => onNavClick("accounts")}
+              className={`w-full flex items-center p-3 rounded-lg font-bold transition-colors whitespace-nowrap overflow-hidden ${
+                activeTab === "accounts"
+                  ? "bg-[#F3B978]/20 text-white shadow-md border-l-4 border-[#F17D0C]"
+                  : "text-[#FDF9F3]/60 hover:bg-[#F3B978]/10 hover:text-white border-l-4 border-transparent"
+              }`}
+            >
+              <div className="flex items-center justify-center w-8 flex-shrink-0">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 10-8 0 4 4 0 008 0zm6 3a4 4 0 10-8 0 4 4 0 008 0z"
+                  />
+                </svg>
+              </div>
+              <span className={`ml-3 ${sidebarLabelCls} transition-opacity duration-300`}>
+                User Accounts
+              </span>
+            </button>
+          )}
         </nav>
 
         {/* Bottom Logout Area */}
