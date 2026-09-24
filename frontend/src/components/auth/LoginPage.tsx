@@ -3,11 +3,11 @@ import type { FormEvent } from "react";
 import type { LoginCredentials } from "../../types/domain";
 import type { LoginResult } from "../../hooks/useAuth";
 
-const LAST_USERNAME_KEY = "bakery.lastLoginUsername";
+const LAST_EMAIL_KEY = "bakery.lastLoginEmail";
 
-function loadLastUsername(): string {
+function loadLastEmail(): string {
   try {
-    return localStorage.getItem(LAST_USERNAME_KEY) ?? "";
+    return localStorage.getItem(LAST_EMAIL_KEY) ?? "";
   } catch {
     return "";
   }
@@ -15,13 +15,13 @@ function loadLastUsername(): string {
 
 interface LoginPageProps {
   onLogin: (credentials: LoginCredentials) => Promise<LoginResult>;
-  getLockedUntil: (username: string) => number | null;
+  getLockedUntil: (email: string) => number | null;
 }
 
 export default function LoginPage({ onLogin, getLockedUntil }: LoginPageProps) {
   // Seeded from localStorage (not the password) so a lockout is visible
-  // immediately on reload, without retyping the username first.
-  const [username, setUsername] = useState(loadLastUsername);
+  // immediately on reload, without retyping the email first.
+  const [email, setEmail] = useState(loadLastEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -37,21 +37,21 @@ export default function LoginPage({ onLogin, getLockedUntil }: LoginPageProps) {
 
   useEffect(() => {
     try {
-      if (username) localStorage.setItem(LAST_USERNAME_KEY, username);
-      else localStorage.removeItem(LAST_USERNAME_KEY);
+      if (email) localStorage.setItem(LAST_EMAIL_KEY, email);
+      else localStorage.removeItem(LAST_EMAIL_KEY);
     } catch {
       // ignore storage errors (e.g. private browsing)
     }
-  }, [username]);
+  }, [email]);
 
-  const lockedUntil = getLockedUntil(username);
+  const lockedUntil = getLockedUntil(email);
   const secondsLeft = lockedUntil ? Math.max(0, Math.ceil((lockedUntil - now) / 1000)) : 0;
   const isLocked = secondsLeft > 0;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const result = await onLogin({ username, password });
+    const result = await onLogin({ email, password });
     setSubmitting(false);
     setError(result.ok ? null : result.error);
   };
@@ -67,11 +67,11 @@ export default function LoginPage({ onLogin, getLockedUntil }: LoginPageProps) {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800 disabled:bg-gray-100 disabled:text-gray-400"
               autoComplete="username"
               disabled={isLocked}

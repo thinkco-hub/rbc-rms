@@ -32,7 +32,7 @@ function toUser(data: MeResponse): User {
 export function useAuth() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
-  const [lockedUntilByUsername, setLockedUntilByUsername] = useState<Record<string, number>>({});
+  const [lockedUntilByEmail, setLockedUntilByEmail] = useState<Record<string, number>>({});
 
   useEffect(() => {
     api
@@ -42,15 +42,15 @@ export function useAuth() {
       .finally(() => setIsRestoring(false));
   }, []);
 
-  const getLockedUntil = (username: string): number | null => {
-    return lockedUntilByUsername[username.trim().toLowerCase()] ?? null;
+  const getLockedUntil = (email: string): number | null => {
+    return lockedUntilByEmail[email.trim().toLowerCase()] ?? null;
   };
 
-  const login = async ({ username, password }: LoginCredentials): Promise<LoginResult> => {
-    const key = username.trim().toLowerCase();
+  const login = async ({ email, password }: LoginCredentials): Promise<LoginResult> => {
+    const key = email.trim().toLowerCase();
     try {
-      const data = await api.post<MeResponse>("/api/v1/accounts/login/", { username, password });
-      setLockedUntilByUsername((prev) => {
+      const data = await api.post<MeResponse>("/api/v1/accounts/login/", { email, password });
+      setLockedUntilByEmail((prev) => {
         const { [key]: _removed, ...rest } = prev;
         return rest;
       });
@@ -59,11 +59,11 @@ export function useAuth() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
         const lockedUntil = (err.details as { locked_until?: number })?.locked_until;
-        if (lockedUntil) setLockedUntilByUsername((prev) => ({ ...prev, [key]: lockedUntil }));
+        if (lockedUntil) setLockedUntilByEmail((prev) => ({ ...prev, [key]: lockedUntil }));
         return { ok: false, error: "Too many failed attempts. Please wait for the lockout to expire." };
       }
       const detail = err instanceof ApiError ? (err.details as { detail?: string })?.detail : null;
-      return { ok: false, error: detail || "Invalid username or password." };
+      return { ok: false, error: detail || "Invalid email or password." };
     }
   };
 

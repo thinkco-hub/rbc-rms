@@ -309,7 +309,7 @@ export interface User {
 
 /** Payload of the login form (LoginPage). */
 export interface LoginCredentials {
-  username: string;
+  email: string;
   password: string;
 }
 
