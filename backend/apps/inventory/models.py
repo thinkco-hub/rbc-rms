@@ -1,9 +1,12 @@
 from django.db import models
+from django.utils import timezone
 
 class RawMaterial(models.Model):
     raw_material_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=150)
     unit = models.CharField(max_length=20)
+    supplier = models.CharField(max_length=150, blank=True)
+    unit_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     current_stock = models.DecimalField(max_digits=12, decimal_places=3, default=0)
     reorder_threshold = models.DecimalField(max_digits=12, decimal_places=3, default=0)
 
@@ -12,11 +15,12 @@ class CostLayer(models.Model):
     raw_material = models.ForeignKey(RawMaterial, on_delete=models.CASCADE)
     quantity_remaining = models.DecimalField(max_digits=12, decimal_places=3)
     unit_cost = models.DecimalField(max_digits=12, decimal_places=2)
-    received_date = models.DateField(auto_now_add=True)
+    received_date = models.DateField(default=timezone.localdate, db_index=True)
 
 class RestockReminder(models.Model):
     restock_reminder_id = models.AutoField(primary_key=True)
     raw_material = models.ForeignKey(RawMaterial, on_delete=models.CASCADE)
+    note = models.TextField(blank=True)
     quantity_needed = models.DecimalField(max_digits=12, decimal_places=3)
     target_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, default="pending")
