@@ -4,6 +4,8 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.accounts.permissions import InventoryPermission
+
 from .models import CostLayer, MenuItem, RawMaterial, RestockReminder
 from .serializers import (
 	CostLayerSerializer,
@@ -18,6 +20,7 @@ from .services import consume_stock, receive_stock
 class RawMaterialViewSet(viewsets.ModelViewSet):
 	queryset = RawMaterial.objects.all().order_by("name")
 	serializer_class = RawMaterialSerializer
+	permission_classes = [InventoryPermission]
 
 	@action(detail=True, methods=["get"])
 	def cost_layers(self, request, pk=None):
@@ -47,6 +50,8 @@ class RawMaterialViewSet(viewsets.ModelViewSet):
 
 
 class ReceiptViewSet(viewsets.ViewSet):
+	permission_classes = [InventoryPermission]
+
 	def create(self, request):
 		serializer = ReceiptSerializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
@@ -69,19 +74,24 @@ class ReceiptViewSet(viewsets.ViewSet):
 class CostLayerViewSet(viewsets.ReadOnlyModelViewSet):
 	queryset = CostLayer.objects.select_related("raw_material").order_by("received_date", "pk")
 	serializer_class = CostLayerSerializer
+	permission_classes = [InventoryPermission]
 
 
 class RestockReminderViewSet(viewsets.ModelViewSet):
 	queryset = RestockReminder.objects.select_related("raw_material").order_by("status", "target_date")
 	serializer_class = RestockReminderSerializer
+	permission_classes = [InventoryPermission]
 
 
 class MenuItemViewSet(viewsets.ModelViewSet):
 	queryset = MenuItem.objects.all().order_by("name")
 	serializer_class = MenuItemSerializer
+	permission_classes = [InventoryPermission]
 
 
 class InventoryAlertViewSet(viewsets.ViewSet):
+	permission_classes = [InventoryPermission]
+
 	def list(self, request):
 		alerts = RawMaterial.objects.filter(current_stock__lt=F("reorder_threshold"))
 		return Response(RawMaterialSerializer(alerts, many=True).data)

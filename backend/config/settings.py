@@ -37,6 +37,10 @@ CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS",
     default=["http://localhost:5173", "http://127.0.0.1:5173"],
 )
+# The frontend authenticates via a session cookie (credentials: "include"),
+# so the browser needs Access-Control-Allow-Credentials: true — without it
+# every cross-origin request is silently blocked before it reaches Django.
+CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = env.list(
     "CSRF_TRUSTED_ORIGINS",
     default=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -46,10 +50,21 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
+    # Being logged in is necessary but not sufficient — each viewset also
+    # declares the per-module permission (see apps.accounts.permissions)
+    # required to read/write it, per the Security NFR.
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAdminUser",
+        "rest_framework.permissions.IsAuthenticated",
     ],
 }
+
+# Session/CSRF cookies: HttpOnly (default) so JS can't read the session id,
+# SameSite=Lax as CSRF-token cookies must stay JS-readable for the
+# X-CSRFToken header dance the frontend api client does.
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
 
 # Application definition
@@ -112,6 +127,18 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         **env.db("DATABASE_URL"),
+    }
+}
+
+
+# Cache
+# Backs the login lockout (apps.accounts.services) — must be shared across
+# every server process, since a per-process cache would let an attacker just
+# get routed to a different worker to reset their attempt count.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env("REDIS_URL", default="redis://localhost:6379/0"),
     }
 }
 
