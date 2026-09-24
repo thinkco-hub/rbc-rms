@@ -7,7 +7,6 @@ INVENTORY_VIEW = "inventory.view"
 INVENTORY_MANAGE = "inventory.manage"
 RECIPES_VIEW = "recipes.view"
 RECIPES_MANAGE = "recipes.manage"
-RECIPES_APPROVE = "recipes.approve"
 
 
 def _employee_permission_codes(user):

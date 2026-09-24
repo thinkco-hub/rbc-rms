@@ -1,12 +1,9 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
-from django.utils import timezone
 
 from apps.inventory.services import calculate_fifo_cost
 
-from .models import Recipe, RecipeIngredient
 
 
 def calculate_recipe_cost(recipe):
@@ -24,12 +21,3 @@ def calculate_suggested_price(cost_per_unit, margin_percent):
         raise ValidationError("Target margin must be between 0 and 99.99 percent.")
     return cost_per_unit / (Decimal("1") - (margin / Decimal("100")))
 
-
-@transaction.atomic
-def approve_price(recipe, user):
-    recipe.approved_price = recipe.suggested_price
-    recipe.approval_status = Recipe.APPROVAL_APPROVED
-    recipe.approved_at = timezone.now()
-    recipe.approved_by = user
-    recipe.save(update_fields=["approved_price", "approval_status", "approved_at", "approved_by"])
-    return recipe

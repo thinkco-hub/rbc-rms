@@ -45,14 +45,10 @@ class RecipeSerializer(serializers.ModelSerializer):
             "yield_unit",
             "target_margin_percent",
             "suggested_price",
-            "approved_price",
-            "approval_status",
-            "approved_at",
             "ingredients",
             "total_cost",
             "cost_per_unit",
         ]
-        read_only_fields = ["approved_price", "approval_status", "approved_at"]
 
     def validate_yield_quantity(self, value):
         if value <= 0:
@@ -89,10 +85,6 @@ class RecipeSerializer(serializers.ModelSerializer):
         ingredients = validated_data.pop("recipeingredient_set", None)
         for field, value in validated_data.items():
             setattr(instance, field, value)
-        instance.approval_status = Recipe.APPROVAL_PENDING
-        instance.approved_price = None
-        instance.approved_at = None
-        instance.approved_by = None
         instance.save()
         if ingredients is not None:
             self._replace_ingredients(instance, ingredients)
