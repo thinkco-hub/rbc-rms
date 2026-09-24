@@ -292,22 +292,53 @@ export interface DayClosing {
 export type DayClosingData = Omit<DayClosing, "id" | "closedAt">;
 
 // ---------- Users / Auth ----------
-export type UserRole = "admin" | "staff";
+/** Role names as seeded server-side (apps/accounts/migrations/0003_seed_roles_and_permissions.py). */
+export type UserRole = "Owner" | "Admin" | "Staff";
 
+/**
+ * The signed-in user. Never carries a password or hash — the backend never
+ * sends one, and authentication is a server-side session (see useAuth).
+ */
 export interface User {
   id: UserId;
   name: string;
   email: string;
-  passwordHash: string;
   role: UserRole;
-  active: boolean;
-  createdAt: ISODateTime;
+  isSuperuser: boolean;
 }
 
 /** Payload of the login form (LoginPage). */
 export interface LoginCredentials {
   email: string;
   password: string;
+}
+
+// ---------- Accounts management (FR-3.10.1) ----------
+export interface Account {
+  id: UserId;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  roleId: number;
+  roleName: UserRole;
+  active: boolean;
+}
+
+/** Payload of the account editor; password is required only when creating. */
+export interface AccountInput {
+  id: UserId | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  roleId: number | "";
+  password: string;
+}
+
+export interface AccountRole {
+  id: number;
+  name: UserRole;
 }
 
 // ---------- Navigation ----------
@@ -325,7 +356,8 @@ export type NavTabId =
   | "calendar"
   | "reports-dashboard"
   | "reports-closing"
-  | "reports-inventory";
+  | "reports-inventory"
+  | "accounts";
 
 // ---------- Derived / computed values (utils) ----------
 /** Tabs rendered by the inventory feature view. */
