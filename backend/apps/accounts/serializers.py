@@ -46,7 +46,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    username = serializers.CharField()
     password = serializers.CharField(trim_whitespace=False)
 
 

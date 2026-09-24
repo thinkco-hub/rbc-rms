@@ -16,19 +16,19 @@ class LoginLockedOut(Exception):
         super().__init__("Too many failed attempts.")
 
 
-def _cache_key(email):
-    return f"{CACHE_KEY_PREFIX}{email.strip().lower()}"
+def _cache_key(username):
+    return f"{CACHE_KEY_PREFIX}{username.strip().lower()}"
 
 
-def get_locked_until(email):
-    """Epoch-ms the given email is locked out until, or None. Authoritative server-side state."""
-    record = cache.get(_cache_key(email)) or {}
+def get_locked_until(username):
+    """Epoch-ms the given username is locked out until, or None. Authoritative server-side state."""
+    record = cache.get(_cache_key(username)) or {}
     locked_until = record.get("locked_until")
     return locked_until if locked_until else None
 
 
-def _record_failed_attempt(email):
-    key = _cache_key(email)
+def _record_failed_attempt(username):
+    key = _cache_key(username)
     record = cache.get(key) or {"attempts": 0, "locked_until": None}
     record["attempts"] += 1
     if record["attempts"] >= MAX_ATTEMPTS:
@@ -38,31 +38,31 @@ def _record_failed_attempt(email):
     cache.set(key, record, timeout=LOCKOUT_SECONDS + 5)
 
 
-def _clear_attempts(email):
-    cache.delete(_cache_key(email))
+def _clear_attempts(username):
+    cache.delete(_cache_key(username))
 
 
-def authenticate_employee(email, password):
+def authenticate_employee(username, password):
     """
     Verifies credentials against Django's hashed password store and the
     Employee's active status, enforcing a server-side lockout after
     repeated failures. Returns the authenticated User, or raises
     LoginLockedOut / ValidationError.
     """
-    locked_until = get_locked_until(email)
+    locked_until = get_locked_until(username)
     if locked_until:
         raise LoginLockedOut(locked_until)
 
-    user = authenticate(username=email, password=password)
+    user = authenticate(username=username, password=password)
     employee = getattr(user, "employee", None) if user else None
     if not user or not employee or not employee.is_active_employee:
-        _record_failed_attempt(email)
-        locked_until = get_locked_until(email)
+        _record_failed_attempt(username)
+        locked_until = get_locked_until(username)
         if locked_until:
             raise LoginLockedOut(locked_until)
-        raise ValidationError("Invalid email or password.")
+        raise ValidationError("Invalid username or password.")
 
-    _clear_attempts(email)
+    _clear_attempts(username)
     return user
 
 
