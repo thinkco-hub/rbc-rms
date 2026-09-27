@@ -6,10 +6,16 @@ class Role(models.Model):
     role_name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
 
+    def __str__(self):
+        return self.role_name
+
 class Permission(models.Model):
     perm_id = models.AutoField(primary_key=True)
     permission_name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.permission_name
 
 class RolePermission(models.Model):
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
@@ -17,6 +23,9 @@ class RolePermission(models.Model):
     description = models.TextField(blank=True)
     class Meta:
         unique_together = ("role", "perm")
+
+    def __str__(self):
+        return f"{self.role} → {self.perm}"
 
 class Employee(models.Model):
     STATUS_ACTIVE = "active"
@@ -36,6 +45,9 @@ class Employee(models.Model):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=30, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def is_active_employee(self):

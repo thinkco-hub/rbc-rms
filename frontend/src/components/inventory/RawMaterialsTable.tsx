@@ -6,6 +6,9 @@ import { groupByStatus, getStockStatus, STOCK_STATUS_LABELS } from "../../utils/
 import type { FormEvent } from "react";
 import type { IngredientFormData, IngredientStock, StockStatus } from "../../types/domain";
 
+/** Selectable units for raw material quantities. */
+const UNIT_OPTIONS = ["kg", "g", "L", "mL", "pcs", "pack", "dozen", "box"];
+
 /** Ingredient form state: numeric fields are raw strings while typing. */
 type IngredientFormState = Omit<IngredientFormData, "qty" | "target" | "unitCost"> & {
   qty: string;
@@ -95,14 +98,24 @@ function IngredientFormModal({
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Unit</label>
-              <input
-                type="text"
-                placeholder="kg, Liters..."
+              <select
                 value={form.unit}
                 onChange={(e) => update("unit", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800 bg-white"
                 required
-              />
+              >
+                <option value="" disabled>
+                  Select unit
+                </option>
+                {(form.unit && !UNIT_OPTIONS.includes(form.unit)
+                  ? [form.unit, ...UNIT_OPTIONS]
+                  : UNIT_OPTIONS
+                ).map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
