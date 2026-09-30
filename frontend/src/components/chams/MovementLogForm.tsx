@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import NumericField from "../common/NumericField";
 import { formatMonthLabel, monthKey } from "../../utils/ledger";
 import type { FormEvent } from "react";
 import type { ChamsBranch, ChamsMovement, ChamsProduct, MonthKey } from "../../types/domain";
@@ -119,40 +120,13 @@ export default function MovementLogForm({ branches, products, movements, onSubmi
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Restocked</label>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={restocked}
-              onChange={(e) => setRestocked(e.target.value)}
-              placeholder="0"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
-            />
+            <NumericField label="Restocked" value={restocked} onChange={setRestocked} placeholder="0" />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Spoilage</label>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={spoilage}
-              onChange={(e) => setSpoilage(e.target.value)}
-              placeholder="0"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
-            />
+            <NumericField label="Spoilage" value={spoilage} onChange={setSpoilage} placeholder="0" />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sold</label>
-            <input
-              type="number"
-              min="0"
-              step="any"
-              value={sold}
-              onChange={(e) => setSold(e.target.value)}
-              placeholder="0"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
-            />
+            <NumericField label="Sold" value={sold} onChange={setSold} placeholder="0" />
           </div>
         </div>
 

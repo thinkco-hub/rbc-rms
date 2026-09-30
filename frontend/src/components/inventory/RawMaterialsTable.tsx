@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import NumericField from "../common/NumericField";
 import InventoryStatsBar from "./InventoryStatsBar";
 import StockStatusBadge from "./StockStatusBadge";
 import { SearchIcon } from "../icons";
@@ -83,16 +84,10 @@ function IngredientFormModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Qty in Stock
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="any"
+              <NumericField
+                label="Qty in Stock"
                 value={form.qty}
-                onChange={(e) => update("qty", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                onChange={(v) => update("qty", v)}
                 required
               />
             </div>
@@ -120,30 +115,18 @@ function IngredientFormModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Reorder Threshold
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="any"
+              <NumericField
+                label="Reorder Threshold"
                 value={form.target}
-                onChange={(e) => update("target", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                onChange={(v) => update("target", v)}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Unit Cost (₱)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="any"
+              <NumericField
+                label="Unit Cost (₱)"
                 value={form.unitCost}
-                onChange={(e) => update("unitCost", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                onChange={(v) => update("unitCost", v)}
               />
             </div>
           </div>

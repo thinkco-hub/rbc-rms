@@ -1,4 +1,5 @@
 import React from "react";
+import NumericField from "../common/NumericField";
 import { computeRecipeCost, suggestedPrice } from "../../utils/pricing";
 import type {
   IngredientStock,
@@ -50,13 +51,10 @@ export default function RecipesList({
           <p className="text-sm text-gray-500">Target margin used to compute suggested prices.</p>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min="0"
-            max="95"
-            value={pricingRules.targetMarginPercent}
-            onChange={(e) => onEditRule({ targetMarginPercent: e.target.value })}
-            className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800 text-right font-bold"
+          <NumericField
+            value={String(pricingRules.targetMarginPercent)}
+            onChange={(v) => onEditRule({ targetMarginPercent: v })}
+            className="w-24 py-2 text-right font-bold"
           />
           <span className="text-gray-500 font-medium">% target margin</span>
         </div>

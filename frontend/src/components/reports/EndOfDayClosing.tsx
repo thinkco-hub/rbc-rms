@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import NumericField from "../common/NumericField";
 import { computeDailyClosing } from "../../utils/closing";
 import { getRevenueByPaymentMethod } from "../../utils/sales";
 import type { FormEvent } from "react";
@@ -123,14 +124,12 @@ export default function EndOfDayClosing({
               onChange={(e) => setDescription(e.target.value)}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none"
             />
-            <input
-              type="number"
+            <NumericField
               min="0.01"
-              step="0.01"
               placeholder="Amount"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="sm:w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none"
+              onChange={setAmount}
+              className="sm:w-40 py-2 text-sm"
             />
             <button
               type="submit"

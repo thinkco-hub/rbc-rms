@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import NumericField from "../common/NumericField";
 import { formatMonthLabel, monthKey } from "../../utils/ledger";
 import type { FormEvent } from "react";
 import type { ChamsBeginning, ChamsBranch, ChamsProduct, MonthKey } from "../../types/domain";
@@ -107,15 +108,7 @@ export default function BeginningInventoryForm({ branches, products, beginnings,
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Opening Count</label>
-          <input
-            type="number"
-            min="0"
-            step="any"
-            value={openingCount}
-            onChange={(e) => setOpeningCount(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
-          />
+          <NumericField label="Opening Count" value={openingCount} onChange={setOpeningCount} />
           <p className="text-xs text-gray-400 mt-1.5">
             {hasExisting
               ? "This month already has a confirmed opening count. Editing and saving will overwrite it."

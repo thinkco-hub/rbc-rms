@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import NumericField from "../common/NumericField";
 import { formatMonthLabel, monthKey } from "../../utils/ledger";
 import type { FormEvent } from "react";
 import type { ChamsBranch, ChamsCount, ChamsProduct } from "../../types/domain";
@@ -98,15 +99,11 @@ export default function RemainingCountForm({ branches, products, counts, onSubmi
         )}
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Physical Remaining Count</label>
-          <input
-            type="number"
-            min="0"
-            step="any"
+          <NumericField
+            label="Physical Remaining Count"
             value={remainingReported}
-            onChange={(e) => setRemainingReported(e.target.value)}
+            onChange={setRemainingReported}
             placeholder="Enter what you physically counted"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
             required
           />
         </div>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import NumericField from "../common/NumericField";
 import type { FormEvent } from "react";
 import type { Client, CreateOrderData, MenuItemStock } from "../../types/domain";
 
@@ -104,13 +105,13 @@ export default function CreateOrderModal({ clients, menuInventory, onClose, onCr
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="number"
+                  <NumericField
                     min="1"
+                    allowDecimal={false}
                     placeholder="Qty"
                     value={line.qty}
-                    onChange={(e) => updateLine(idx, "qty", e.target.value)}
-                    className="w-20 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800 text-sm"
+                    onChange={(v) => updateLine(idx, "qty", v)}
+                    className="w-20 py-2 text-sm"
                   />
                   <button
                     type="button"

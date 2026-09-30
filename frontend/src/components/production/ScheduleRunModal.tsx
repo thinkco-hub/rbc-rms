@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import NumericField from "../common/NumericField";
 import { computeBatches } from "../../utils/production";
 import type { FormEvent } from "react";
 import type { Recipe, ScheduleRunData } from "../../types/domain";
@@ -65,13 +66,12 @@ export default function ScheduleRunModal({ recipes, onClose, onSchedule }: Sched
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Quantity to Produce</label>
             <div className="flex gap-2">
-              <input
-                type="number"
+              <NumericField
                 min="1"
-                step={isBatchMode ? "1" : "any"}
+                allowDecimal={!isBatchMode}
                 value={form.qty}
-                onChange={(e) => setForm({ ...form, qty: e.target.value })}
-                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                onChange={(v) => setForm({ ...form, qty: v })}
+                className="flex-1"
                 required
               />
               <select

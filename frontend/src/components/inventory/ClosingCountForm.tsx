@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { FormEvent } from "react";
+import NumericField from "../common/NumericField";
 import type {
   ClosingCountEntry,
   ClosingCountSubmission,
@@ -45,14 +46,11 @@ function CountSection({
                 <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
                 <td className="px-4 py-3 text-gray-500">{("unit" in item && item.unit) || "pcs"}</td>
                 <td className="px-4 py-3 text-right">
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
+                  <NumericField
                     value={counts[item.id] ?? ""}
-                    onChange={(e) => onUpdate(item.id, e.target.value)}
+                    onChange={(v) => onUpdate(item.id, v)}
                     placeholder="Enter count"
-                    className="w-32 px-2 py-1.5 border border-gray-300 rounded-md text-right focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                    className="w-32 py-1.5 text-right"
                   />
                 </td>
               </tr>
