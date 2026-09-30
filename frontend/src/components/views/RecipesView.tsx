@@ -21,7 +21,7 @@ interface RecipesViewProps {
   onCreateRecipe: () => void;
   onEditRule: (data: PricingRuleInput) => void;
   onCancelEdit: () => void;
-  onSave: (recipe: RecipeInput) => void;
+  onSave: (recipe: RecipeInput) => Promise<void>;
 }
 
 export default function RecipesView({

@@ -23,7 +23,7 @@ interface RecipeEditorProps {
   ingredients: IngredientStock[];
   pricingRules: PricingRules;
   onCancel: () => void;
-  onSave: (recipe: RecipeInput) => void;
+  onSave: (recipe: RecipeInput) => Promise<void>;
 }
 
 /** Editor form state: numeric fields are raw strings while typing. */
@@ -99,7 +99,10 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
   } as Recipe;
   const { totalCost, costPerUnit } = computeRecipeCost(normalizedForCalc, ingredients);
 
-  const handleSubmit = (e: FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.category || form.price === "" || form.qty === "" || form.target === "" || !form.shelfLife) {
       return;
@@ -111,19 +114,27 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
     if (hasBom && (!form.yieldQty || !form.yieldUnit)) return;
     const hasYield = form.yieldQty !== "" && !!form.yieldUnit;
 
-    onSave({
-      id: form.id,
-      name: form.name,
-      type: "Menu Item",
-      category: form.category,
-      price: parseFloat(String(form.price)) || 0,
-      qty: parseFloat(String(form.qty)) || 0,
-      target: parseFloat(String(form.target)) || 0,
-      shelfLife: form.shelfLife,
-      yieldQty: hasYield ? parseFloat(String(form.yieldQty)) || 0 : undefined,
-      yieldUnit: hasYield ? form.yieldUnit : undefined,
-      ingredients: cleanIngredients,
-    });
+    setError(null);
+    setSubmitting(true);
+    try {
+      await onSave({
+        id: form.id,
+        name: form.name,
+        type: "Menu Item",
+        category: form.category,
+        price: parseFloat(String(form.price)) || 0,
+        qty: parseFloat(String(form.qty)) || 0,
+        target: parseFloat(String(form.target)) || 0,
+        shelfLife: form.shelfLife,
+        yieldQty: hasYield ? parseFloat(String(form.yieldQty)) || 0 : undefined,
+        yieldUnit: hasYield ? form.yieldUnit : undefined,
+        ingredients: cleanIngredients,
+      });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save recipe.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -339,6 +350,9 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
               </div>
             </div>
 
+            {error && (
+              <p className="text-sm font-semibold text-red-600">{error}</p>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
@@ -349,9 +363,10 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
               </button>
               <button
                 type="submit"
-                className="flex-1 py-3 rounded-xl text-white font-bold bg-[#562D07] hover:bg-[#3a1d04] transition-colors"
+                disabled={submitting}
+                className="flex-1 py-3 rounded-xl text-white font-bold bg-[#562D07] hover:bg-[#3a1d04] transition-colors disabled:opacity-60"
               >
-                Save Recipe
+                {submitting ? "Saving..." : "Save Recipe"}
               </button>
             </div>
           </div>
