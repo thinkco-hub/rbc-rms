@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import CostLayer, MenuItem, RawMaterial, RestockReminder
+from .models import ClosingInventory, CostLayer, MenuItem, RawMaterial, RestockReminder
 
 
 class RawMaterialSerializer(serializers.ModelSerializer):
@@ -22,6 +22,47 @@ class RawMaterialSerializer(serializers.ModelSerializer):
     def validate_unit_cost(self, value):
         if value < 0:
             raise serializers.ValidationError("Unit cost cannot be negative.")
+        return value
+
+
+class MenuItemRestockSerializer(serializers.Serializer):
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+    def validate_quantity(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Restock quantity must be greater than zero.")
+        return value
+
+
+class ClosingInventorySerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source="closing_inventory_id", read_only=True)
+    menu_item_id = serializers.IntegerField(read_only=True)
+    emp_id = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = ClosingInventory
+        fields = [
+            "id",
+            "menu_item_id",
+            "emp_id",
+            "inventory_date",
+            "expected_quantity",
+            "actual_quantity",
+            "discrepancy_quantity",
+            "status",
+            "submitted_at",
+        ]
+        read_only_fields = ["expected_quantity", "discrepancy_quantity", "status", "submitted_at"]
+
+
+class ClosingCountSubmitSerializer(serializers.Serializer):
+    menu_item_id = serializers.PrimaryKeyRelatedField(source="menu_item", queryset=MenuItem.objects.all())
+    actual_quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    inventory_date = serializers.DateField()
+
+    def validate_actual_quantity(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Counted quantity cannot be negative.")
         return value
 
 

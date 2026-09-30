@@ -37,6 +37,15 @@ class MenuItem(models.Model):
     shelf_life = models.CharField(max_length=50, blank=True)
 
 class ClosingInventory(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_APPLIED = "applied"
+    STATUS_DISMISSED = "dismissed"
+    STATUS_CHOICES = (
+        (STATUS_PENDING, "Pending"),
+        (STATUS_APPLIED, "Applied"),
+        (STATUS_DISMISSED, "Dismissed"),
+    )
+
     closing_inventory_id = models.AutoField(primary_key=True)
     menu_item = models.ForeignKey(MenuItem, on_delete=models.CASCADE)
     emp = models.ForeignKey("accounts.Employee", on_delete=models.SET_NULL, null=True)
@@ -44,4 +53,5 @@ class ClosingInventory(models.Model):
     expected_quantity = models.DecimalField(max_digits=12, decimal_places=2)
     actual_quantity = models.DecimalField(max_digits=12, decimal_places=2)
     discrepancy_quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     submitted_at = models.DateTimeField(auto_now_add=True)

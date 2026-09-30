@@ -1,6 +1,7 @@
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    ClosingInventoryViewSet,
     CostLayerViewSet,
     InventoryAlertViewSet,
     MenuItemViewSet,
@@ -16,5 +17,6 @@ router.register("cost-layers", CostLayerViewSet, basename="cost-layer")
 router.register("reminders", RestockReminderViewSet, basename="reminder")
 router.register("menu-items", MenuItemViewSet, basename="menu-item")
 router.register("alerts", InventoryAlertViewSet, basename="alert")
+router.register("closing-inventory", ClosingInventoryViewSet, basename="closing-inventory")
 
 urlpatterns = router.urls

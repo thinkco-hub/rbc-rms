@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from rest_framework.test import APIClient
 
 from apps.inventory.models import CostLayer, MenuItem, RawMaterial
 from apps.inventory.services import receive_stock
@@ -103,3 +104,10 @@ class ProductionServiceTests(TestCase):
     def test_schedule_rejects_non_positive_quantity(self):
         with self.assertRaises(ValidationError):
             schedule_run(self.recipe.pk, 0, date(2026, 2, 1))
+
+
+class ProductionApiPermissionTests(TestCase):
+    def test_production_api_requires_admin_access(self):
+        response = APIClient().get("/api/v1/production/runs/")
+
+        self.assertIn(response.status_code, (401, 403))

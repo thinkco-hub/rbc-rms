@@ -6,15 +6,26 @@ from rest_framework.response import Response
 
 from apps.accounts.permissions import InventoryPermission
 
-from .models import CostLayer, MenuItem, RawMaterial, RestockReminder
+from .models import ClosingInventory, CostLayer, MenuItem, RawMaterial, RestockReminder
 from .serializers import (
+	ClosingCountSubmitSerializer,
+	ClosingInventorySerializer,
 	CostLayerSerializer,
+	MenuItemRestockSerializer,
 	MenuItemSerializer,
 	RawMaterialSerializer,
 	ReceiptSerializer,
 	RestockReminderSerializer,
 )
-from .services import consume_stock, receive_stock
+from .services import (
+	apply_all_pending_counts,
+	apply_closing_count,
+	consume_stock,
+	dismiss_closing_count,
+	receive_stock,
+	restock_menu_item,
+	submit_closing_count,
+)
 
 
 class RawMaterialViewSet(viewsets.ModelViewSet):
@@ -88,6 +99,17 @@ class MenuItemViewSet(viewsets.ModelViewSet):
 	serializer_class = MenuItemSerializer
 	permission_classes = [InventoryPermission]
 
+	@action(detail=True, methods=["post"])
+	def restock(self, request, pk=None):
+		"""Manual restock override for finished goods (FR-3.4.8)."""
+		serializer = MenuItemRestockSerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+		try:
+			menu_item = restock_menu_item(pk, serializer.validated_data["quantity"])
+		except DjangoValidationError as exc:
+			return Response({"detail": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
+		return Response(MenuItemSerializer(menu_item).data)
+
 
 class InventoryAlertViewSet(viewsets.ViewSet):
 	permission_classes = [InventoryPermission]
@@ -95,3 +117,51 @@ class InventoryAlertViewSet(viewsets.ViewSet):
 	def list(self, request):
 		alerts = RawMaterial.objects.filter(current_stock__lt=F("reorder_threshold"))
 		return Response(RawMaterialSerializer(alerts, many=True).data)
+
+
+class ClosingInventoryViewSet(viewsets.ReadOnlyModelViewSet):
+	"""Finished-goods closing counts and the flag → Apply/Dismiss reconciliation workflow (FR-3.4.4-3.4.5)."""
+
+	queryset = ClosingInventory.objects.select_related("menu_item", "emp").order_by("-submitted_at")
+	serializer_class = ClosingInventorySerializer
+	permission_classes = [InventoryPermission]
+
+	def _employee(self, request):
+		return getattr(request.user, "employee", None)
+
+	@action(detail=False, methods=["post"])
+	def submit(self, request):
+		serializer = ClosingCountSubmitSerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+		data = serializer.validated_data
+		try:
+			record = submit_closing_count(
+				data["menu_item"].pk,
+				data["actual_quantity"],
+				data["inventory_date"],
+				emp=self._employee(request),
+			)
+		except DjangoValidationError as exc:
+			return Response({"detail": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
+		return Response(ClosingInventorySerializer(record).data, status=status.HTTP_201_CREATED)
+
+	@action(detail=True, methods=["post"])
+	def apply(self, request, pk=None):
+		try:
+			record = apply_closing_count(pk)
+		except DjangoValidationError as exc:
+			return Response({"detail": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
+		return Response(ClosingInventorySerializer(record).data)
+
+	@action(detail=True, methods=["post"])
+	def dismiss(self, request, pk=None):
+		try:
+			record = dismiss_closing_count(pk)
+		except DjangoValidationError as exc:
+			return Response({"detail": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
+		return Response(ClosingInventorySerializer(record).data)
+
+	@action(detail=False, methods=["post"], url_path="apply-all")
+	def apply_all(self, request):
+		records = apply_all_pending_counts()
+		return Response(ClosingInventorySerializer(records, many=True).data)
