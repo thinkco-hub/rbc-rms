@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import NumericField from "../common/NumericField";
 import { formatMonthLabel, monthKey } from "../../utils/ledger";
 import type { FormEvent } from "react";
@@ -26,6 +26,10 @@ export default function RemainingCountForm({ branches, products, counts, onSubmi
   const existing = counts.find(
     (c) => c.branchId === branchId && c.productId === productId && c.month === month
   );
+
+  useEffect(() => {
+    setRemainingReported(existing ? String(existing.remainingReported) : "");
+  }, [branchId, productId, counts]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
