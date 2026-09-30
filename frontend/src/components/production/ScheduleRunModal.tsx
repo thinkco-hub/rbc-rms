@@ -8,13 +8,14 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 interface ScheduleRunModalProps {
   recipes: Recipe[];
+  initialRecipeId?: string;
   onClose: () => void;
   onSchedule: (data: ScheduleRunData) => void;
 }
 
-export default function ScheduleRunModal({ recipes, onClose, onSchedule }: ScheduleRunModalProps) {
+export default function ScheduleRunModal({ recipes, initialRecipeId, onClose, onSchedule }: ScheduleRunModalProps) {
   const [form, setForm] = useState({
-    recipeId: recipes[0]?.id || "",
+    recipeId: initialRecipeId || recipes[0]?.id || "",
     qty: "",
     qtyUnit: "pcs",
     plannedDate: today(),

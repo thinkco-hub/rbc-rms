@@ -14,6 +14,8 @@ interface ProductionViewProps {
   recipes: Recipe[];
   menuInventory: MenuItemStock[];
   ingredients: IngredientStock[];
+  prefillRecipeId?: string | null;
+  onPrefillConsumed?: () => void;
   onSchedule: (data: ScheduleRunData) => void;
   onComplete: (id: ProductionRunId) => void;
   onDelete: (id: ProductionRunId) => void;
@@ -24,6 +26,8 @@ export default function ProductionView({
   recipes,
   menuInventory,
   ingredients,
+  prefillRecipeId,
+  onPrefillConsumed,
   onSchedule,
   onComplete,
   onDelete,
@@ -34,6 +38,8 @@ export default function ProductionView({
       recipes={recipes}
       menuInventory={menuInventory}
       ingredients={ingredients}
+      prefillRecipeId={prefillRecipeId}
+      onPrefillConsumed={onPrefillConsumed}
       onSchedule={onSchedule}
       onComplete={onComplete}
       onDelete={onDelete}

@@ -131,6 +131,7 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
   } = useRecipes();
 
   // --- PRODUCTION RUNS (src/hooks/useProduction.ts) ---
+  const [productionPrefillRecipeId, setProductionPrefillRecipeId] = React.useState<string | null>(null);
   const {
     productionRuns,
     scheduleProductionRun,
@@ -217,6 +218,7 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
     clearViewingClient();
     setViewingRecipe(null);
     setIsCreatingRecipe(false);
+    setProductionPrefillRecipeId(null);
     setIsMobileOpen(false);
     setIsTabletSidebarOpen(false);
   };
@@ -229,6 +231,14 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
   const goToProductionRuns = () => {
     setActiveTab("production-runs");
     clearViewingOrder();
+  };
+
+  const goToProductionRunsForRecipe = (recipe: { id: string }) => {
+    setActiveTab("production-runs");
+    clearViewingOrder();
+    setViewingRecipe(null);
+    setIsCreatingRecipe(false);
+    setProductionPrefillRecipeId(recipe.id);
   };
 
   return (
@@ -430,6 +440,7 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
             onEditRule={updatePricingRule}
             onCancelEdit={cancelRecipeEdit}
             onSave={saveRecipe}
+            onScheduleProduction={goToProductionRunsForRecipe}
           />
         )}
 
@@ -442,6 +453,8 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
             recipes={recipes}
             menuInventory={menuInventory}
             ingredients={ingredients}
+            prefillRecipeId={productionPrefillRecipeId}
+            onPrefillConsumed={() => setProductionPrefillRecipeId(null)}
             onSchedule={scheduleProductionRun}
             onComplete={completeProductionRun}
             onDelete={deleteProductionRun}

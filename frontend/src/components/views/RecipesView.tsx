@@ -22,6 +22,7 @@ interface RecipesViewProps {
   onEditRule: (data: PricingRuleInput) => void;
   onCancelEdit: () => void;
   onSave: (recipe: RecipeInput) => Promise<void>;
+  onScheduleProduction: (recipe: Recipe) => void;
 }
 
 export default function RecipesView({
@@ -36,6 +37,7 @@ export default function RecipesView({
   onEditRule,
   onCancelEdit,
   onSave,
+  onScheduleProduction,
 }: RecipesViewProps) {
   if (viewingRecipe || isCreatingRecipe) {
     return (
@@ -58,6 +60,7 @@ export default function RecipesView({
       onEditRule={onEditRule}
       onEdit={onViewRecipe}
       onCreate={onCreateRecipe}
+      onScheduleProduction={onScheduleProduction}
     />
   );
 }

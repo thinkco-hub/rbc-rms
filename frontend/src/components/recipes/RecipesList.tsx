@@ -17,6 +17,7 @@ interface RecipesListProps {
   onEditRule: (data: PricingRuleInput) => void;
   onEdit: (recipe: Recipe) => void;
   onCreate: () => void;
+  onScheduleProduction: (recipe: Recipe) => void;
 }
 
 export default function RecipesList({
@@ -27,6 +28,7 @@ export default function RecipesList({
   onEditRule,
   onEdit,
   onCreate,
+  onScheduleProduction,
 }: RecipesListProps) {
   return (
     <div className="max-w-6xl mx-auto animate-fadeIn pb-10 w-full">
@@ -116,12 +118,18 @@ export default function RecipesList({
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-center">
+                      <td className="px-4 py-4 text-center whitespace-nowrap">
                         <button
                           onClick={() => onEdit(recipe)}
                           className="text-gray-500 hover:text-[#F17D0C] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => onScheduleProduction(recipe)}
+                          className="text-gray-500 hover:text-[#F17D0C] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
+                        >
+                          Schedule Run
                         </button>
                       </td>
                     </tr>
