@@ -2,11 +2,13 @@ from datetime import date
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from .models import ClosingInventory, CostLayer, MenuItem, RawMaterial
+from .models import ClosingInventory, CostLayer, FinishedGoodsCostLayer, MenuItem, RawMaterial
 from .services import (
 	apply_all_pending_counts,
 	apply_closing_count,
@@ -62,6 +64,56 @@ class MenuItemRestockTests(TestCase):
 	def test_restock_rejects_non_positive_quantity(self):
 		with self.assertRaises(ValidationError):
 			restock_menu_item(self.item.pk, 0)
+
+
+class FinishedGoodsCostLayerTests(TestCase):
+	def setUp(self):
+		self.item = MenuItem.objects.create(name="Croissant", selling_price=120)
+
+	def test_unknown_cost_layer_preserves_quantity_and_source(self):
+		layer = FinishedGoodsCostLayer.objects.create(
+			menu_item=self.item,
+			quantity=5,
+			quantity_remaining=5,
+			unit_cost=None,
+			source_type=FinishedGoodsCostLayer.SOURCE_OPENING_BALANCE,
+		)
+
+		self.assertEqual(layer.menu_item, self.item)
+		self.assertEqual(layer.quantity, Decimal("5.00"))
+		self.assertEqual(layer.quantity_remaining, Decimal("5.00"))
+		self.assertIsNone(layer.unit_cost)
+
+	def test_layer_rejects_invalid_quantity_ranges(self):
+		with self.assertRaises(IntegrityError):
+			with transaction.atomic():
+				FinishedGoodsCostLayer.objects.create(
+					menu_item=self.item,
+					quantity=0,
+					quantity_remaining=0,
+					source_type=FinishedGoodsCostLayer.SOURCE_ADJUSTMENT,
+				)
+
+		with self.assertRaises(IntegrityError):
+			with transaction.atomic():
+				FinishedGoodsCostLayer.objects.create(
+					menu_item=self.item,
+					quantity=2,
+					quantity_remaining=3,
+					source_type=FinishedGoodsCostLayer.SOURCE_ADJUSTMENT,
+				)
+
+	def test_menu_item_is_protected_while_cost_layer_exists(self):
+		FinishedGoodsCostLayer.objects.create(
+			menu_item=self.item,
+			quantity=1,
+			quantity_remaining=1,
+			unit_cost=10,
+			source_type=FinishedGoodsCostLayer.SOURCE_PRODUCTION,
+		)
+
+		with self.assertRaises(ProtectedError):
+			self.item.delete()
 
 
 class ClosingInventoryReconciliationTests(TestCase):
