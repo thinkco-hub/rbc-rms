@@ -24,10 +24,10 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-[#121212]">Sale Complete</h2>
-          <p className="text-gray-500 text-sm mt-1">{receipt.id}</p>
+          <p className="text-gray-500 text-sm mt-1">Transaction {receipt.id}</p>
           {receipt.type === "Pre-Order" && (
             <p className="text-xs font-semibold text-[#F17D0C] mt-2 bg-orange-50 rounded-full px-3 py-1 inline-block">
-              Added to Orders — tracked through production &amp; delivery
+              Future delivery date recorded on this sale
             </p>
           )}
         </div>
@@ -47,7 +47,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
             <span>Payment Method</span>
             <span className="font-semibold text-gray-800">{receipt.paymentMethod}</span>
           </div>
-          {receipt.type === "Pre-Order" && (
+          {receipt.deliveryDate && receipt.type === "Pre-Order" && (
             <div className="flex justify-between">
               <span>Delivery Date</span>
               <span className="font-semibold text-gray-800">{receipt.deliveryDate}</span>
@@ -56,7 +56,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
           <div className="flex justify-between">
             <span>Date</span>
             <span className="font-semibold text-gray-800">
-              {new Date(receipt.createdAt).toLocaleString()}
+              {receipt.createdAt ? new Date(receipt.createdAt).toLocaleString() : "Date unavailable"}
             </span>
           </div>
         </div>
@@ -65,11 +65,11 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
           {receipt.items.map((item) => (
             <li key={item.id} className="py-2 flex justify-between text-sm">
               <span className="text-gray-700">
-                <span className="text-gray-400 mr-2">{item.qty}x</span>
+                <span className="text-gray-400 mr-2">{item.qty} {item.unit} × ₱{item.price.toFixed(2)}</span>
                 {item.name}
               </span>
               <span className="font-semibold text-gray-900">
-                ₱{(item.price * item.qty).toFixed(2)}
+                ₱{item.lineTotal.toFixed(2)}
               </span>
             </li>
           ))}
@@ -80,9 +80,15 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
             <span>Subtotal</span>
             <span>₱{receipt.subtotal.toFixed(2)}</span>
           </div>
+          {receipt.discount > 0 && (
+            <div className="flex justify-between text-gray-500 text-sm">
+              <span>Discount</span>
+              <span>-₱{receipt.discount.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-gray-500 text-sm">
-            <span>Tax (5%)</span>
-            <span>₱{receipt.tax.toFixed(2)}</span>
+            <span>{receipt.taxRate === null ? "Tax" : `Tax (${receipt.taxRate}%)`}</span>
+            <span>{receipt.tax === null ? "Unavailable" : `₱${receipt.tax.toFixed(2)}`}</span>
           </div>
           <div
             className={`flex justify-between text-lg font-bold text-[#121212] pt-1 ${

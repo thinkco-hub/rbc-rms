@@ -241,7 +241,7 @@ export default function PosView({
                       </span>
                       <button
                         onClick={() => adjustCartQty(item.id, 1)}
-                        disabled={item.qty >= item.availableStock}
+                        disabled={isCatalogLoading || Boolean(catalogError) || item.qty >= item.availableStock}
                         className="w-8 h-8 flex items-center justify-center bg-gray-50 hover:bg-gray-200 text-gray-600 transition-colors"
                       >
                         <svg
@@ -263,6 +263,11 @@ export default function PosView({
                       {item.qty} x ₱{item.price.toFixed(2)}
                     </span>
                   </div>
+                  {item.qty > item.availableStock && (
+                    <p className="mt-2 text-xs font-medium text-red-600">
+                      Only {item.availableStock} {item.unit} currently available. Reduce the quantity to continue.
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>

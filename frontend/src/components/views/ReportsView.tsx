@@ -18,6 +18,8 @@ import type {
 interface ReportsViewProps {
   activeTab: ReportsTabId;
   sales: Sale[];
+  salesLoading: boolean;
+  salesError: string | null;
   onReprintSale: (sale: Sale | null) => void;
   expenses: Expense[];
   dayClosings: DayClosing[];
@@ -32,6 +34,8 @@ interface ReportsViewProps {
 export default function ReportsView({
   activeTab,
   sales,
+  salesLoading,
+  salesError,
   onReprintSale,
   expenses,
   dayClosings,
@@ -44,6 +48,14 @@ export default function ReportsView({
 }: ReportsViewProps) {
   return (
     <>
+      {salesLoading && (
+        <p role="status" className="mb-4 text-sm text-gray-500">Loading persisted sales history...</p>
+      )}
+      {salesError && (
+        <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Sales history could not be loaded: {salesError}
+        </p>
+      )}
       {activeTab === "reports-dashboard" && <ReportsDashboard sales={sales} onReprintSale={onReprintSale} />}
 
       {/* =========================================

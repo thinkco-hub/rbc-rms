@@ -14,6 +14,8 @@ interface OrderConfirmationModalProps {
   onClose: () => void;
   onConfirm: () => void;
   disabled: boolean;
+  isSubmitting: boolean;
+  error: string | null;
 }
 
 export default function OrderConfirmationModal({
@@ -25,6 +27,8 @@ export default function OrderConfirmationModal({
   onClose,
   onConfirm,
   disabled,
+  isSubmitting,
+  error,
 }: OrderConfirmationModalProps) {
   return (
     <div
@@ -124,8 +128,8 @@ export default function OrderConfirmationModal({
           />
           <p className="text-xs text-gray-400 mt-1.5">
             {modal.deliveryDate > todayISO
-              ? "This order will be tracked in Orders (production & delivery)."
-              : "Set a later date to track this order in Orders."}
+              ? "This delivery date will be recorded on the sale."
+              : "Set a later date to record it on the sale."}
           </p>
         </div>
 
@@ -162,9 +166,16 @@ export default function OrderConfirmationModal({
           />
         </div>
 
+        {error && (
+          <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+
         <div className="flex gap-3">
           <button
             onClick={onClose}
+            disabled={isSubmitting}
             className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-100 transition-colors"
           >
             Cancel
@@ -178,7 +189,7 @@ export default function OrderConfirmationModal({
                 : "bg-[#F17D0C] hover:bg-[#d86b06]"
             }`}
           >
-            Confirm Order
+            {isSubmitting ? "Saving Sale..." : "Confirm Order"}
           </button>
         </div>
       </div>

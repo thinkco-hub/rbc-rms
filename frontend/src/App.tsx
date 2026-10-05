@@ -149,7 +149,6 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
     viewingOrder,
     setViewingOrder,
     createOrder,
-    createOrderFromSale,
     recordOrderPayment,
     advanceOrderStatus,
     scheduleOrderDelivery,
@@ -174,7 +173,10 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
   });
 
   // --- POS (src/hooks/usePos.ts) ---
-  const pos = usePos({ isActive: activeTab === "pos", createOrderFromSale });
+  const pos = usePos({
+    isActive: activeTab === "pos",
+    onStockUpdated: inventory.refreshMenuInventory,
+  });
   const {
     posCategory,
     setPosCategory,
@@ -202,6 +204,10 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
     startResizing,
     todayISO,
     isConfirmOrderDisabled,
+    isSubmitting: isPosSubmitting,
+    checkoutError,
+    salesLoading,
+    salesError,
   } = pos;
 
   // --- DERIVED CROSS-FEATURE VALUES (dashboard) ---
@@ -281,7 +287,9 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
           onFieldChange={updateConfirmField}
           onClose={closeConfirmModal}
           onConfirm={completeSale}
-          disabled={isConfirmOrderDisabled}
+          disabled={isConfirmOrderDisabled || isPosSubmitting}
+          isSubmitting={isPosSubmitting}
+          error={checkoutError}
         />
       )}
 
@@ -482,6 +490,8 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
           <ReportsView
             activeTab={activeTab}
             sales={sales}
+            salesLoading={salesLoading}
+            salesError={salesError}
             onReprintSale={setReceipt}
             expenses={expenses}
             dayClosings={dayClosings}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type {
   IngredientFormData,
@@ -37,6 +37,12 @@ export function useInventory() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [restockModal, setRestockModal] = useState<RestockModalState>(EMPTY_RESTOCK_MODAL);
+
+  const refreshMenuInventory = useCallback(async () => {
+    const menuItems = await api.get<BackendMenuItem[]>("/api/v1/inventory/menu-items/");
+    setMenuInventory(menuItems.map(toMenuItem));
+    setError(null);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -267,6 +273,7 @@ export function useInventory() {
     submitRestock,
     restockItems,
     isRestockConfirmDisabled,
+    refreshMenuInventory,
     isLoading,
     error,
     deductOrderLines,

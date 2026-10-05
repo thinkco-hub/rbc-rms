@@ -171,19 +171,32 @@ export interface CartItem extends PosProduct {
   qty: Quantity;
 }
 
+export interface SaleItem {
+  id: MenuItemId;
+  name: string;
+  qty: Quantity;
+  price: Price;
+  unit: string;
+  lineTotal: number;
+}
+
 export interface Sale {
   id: SaleId;
   type: SaleType;
+  status: string;
   customerName: string;
   customerContact: string;
   paymentMethod: PaymentMethod;
-  items: CartItem[];
+  paymentReference: string;
+  items: SaleItem[];
   subtotal: number;
-  tax: number;
+  discount: number;
+  taxRate: number | null;
+  tax: number | null;
   total: number;
-  deliveryDate: ISODate;
+  deliveryDate: ISODate | null;
   notes: string;
-  createdAt: ISODateTime;
+  createdAt: ISODateTime | null;
 }
 
 /** State of the order confirmation modal (OrderConfirmationModal). */
