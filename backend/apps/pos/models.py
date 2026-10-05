@@ -37,8 +37,10 @@ class PosTransaction(models.Model):
     customer_name = models.CharField(max_length=150, blank=True)
     customer_contact = models.CharField(max_length=150, blank=True)
     notes = models.TextField(blank=True)
+    delivery_date = models.DateField(null=True, blank=True)
     transaction_timestamp = models.DateTimeField(null=True, blank=True)
     idempotency_key = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    request_fingerprint = models.CharField(max_length=64, blank=True, default="")
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices)
     payment_status = models.CharField(
         max_length=20,
