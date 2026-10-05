@@ -4,8 +4,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.inventory.models import MenuItem, RawMaterial
-from apps.inventory.services import consume_stock
+from apps.inventory.models import FinishedGoodsCostLayer, RawMaterial
+from apps.inventory.services import add_finished_goods_stock, consume_stock
 from apps.recipes.models import Recipe
 
 from .models import ProductionConsumption, ProductionRun
@@ -89,21 +89,36 @@ def complete_run(run_id, emp=None, actual_quantity=None):
     if shortfalls:
         raise InsufficientStockError(shortfalls)
 
+    total_consumption_cost = Decimal("0.00")
+    has_cost_basis = False
     for material_id, required in required_ingredients(run.recipe, run.planned_quantity):
         if required <= 0:
             continue
         _, _, total_cost = consume_stock(material_id, required)
+        recorded_total_cost = total_cost.quantize(COST_STEP, ROUND_HALF_UP)
         ProductionConsumption.objects.create(
             production=run,
             raw_material_id=material_id,
             quantity_consumed=required,
             unit_cost=(total_cost / required).quantize(COST_STEP, ROUND_HALF_UP),
-            total_cost=total_cost.quantize(COST_STEP, ROUND_HALF_UP),
+            total_cost=recorded_total_cost,
         )
+        total_consumption_cost += recorded_total_cost
+        has_cost_basis = True
 
-    menu_item = MenuItem.objects.select_for_update().get(pk=run.menu_item_id)
-    menu_item.stock_quantity += produced
-    menu_item.save(update_fields=["stock_quantity"])
+    if produced > 0:
+        unit_cost = (
+            (total_consumption_cost / produced).quantize(COST_STEP, ROUND_HALF_UP)
+            if has_cost_basis
+            else None
+        )
+        add_finished_goods_stock(
+            run.menu_item_id,
+            produced,
+            unit_cost,
+            FinishedGoodsCostLayer.SOURCE_PRODUCTION,
+            source_reference=f"Production run {run.pk}",
+        )
 
     run.status = ProductionRun.STATUS_COMPLETED
     run.actual_quantity = produced

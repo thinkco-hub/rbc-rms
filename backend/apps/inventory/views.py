@@ -105,7 +105,11 @@ class MenuItemViewSet(viewsets.ModelViewSet):
 		serializer = MenuItemRestockSerializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
 		try:
-			menu_item = restock_menu_item(pk, serializer.validated_data["quantity"])
+			menu_item = restock_menu_item(
+				pk,
+				serializer.validated_data["quantity"],
+				serializer.validated_data["unit_cost"],
+			)
 		except DjangoValidationError as exc:
 			return Response({"detail": exc.messages}, status=status.HTTP_400_BAD_REQUEST)
 		return Response(MenuItemSerializer(menu_item).data)

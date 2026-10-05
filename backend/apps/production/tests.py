@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from apps.inventory.models import CostLayer, MenuItem, RawMaterial
+from apps.inventory.models import CostLayer, FinishedGoodsCostLayer, MenuItem, RawMaterial
 from apps.inventory.services import receive_stock
 from apps.recipes.models import Recipe, RecipeIngredient
 
@@ -46,6 +46,11 @@ class ProductionServiceTests(TestCase):
         flour_row = ProductionConsumption.objects.get(production=run, raw_material=self.flour)
         self.assertEqual(flour_row.quantity_consumed, Decimal("4.000"))
         self.assertEqual(flour_row.total_cost, Decimal("40.00"))
+        finished_layer = FinishedGoodsCostLayer.objects.get(menu_item=self.item)
+        self.assertEqual(finished_layer.quantity, Decimal("20.00"))
+        self.assertEqual(finished_layer.quantity_remaining, Decimal("20.00"))
+        self.assertEqual(finished_layer.unit_cost, Decimal("4.00"))
+        self.assertEqual(finished_layer.source_type, FinishedGoodsCostLayer.SOURCE_PRODUCTION)
 
     def test_partial_batch_scales_ingredients(self):
         self._stock(10, 10)
@@ -53,6 +58,33 @@ class ProductionServiceTests(TestCase):
         complete_run(run.pk)
         self.flour.refresh_from_db()
         self.assertEqual(self.flour.current_stock, Decimal("9.000"))
+        finished_layer = FinishedGoodsCostLayer.objects.get(menu_item=self.item)
+        self.assertEqual(finished_layer.quantity, Decimal("5.00"))
+        self.assertEqual(finished_layer.unit_cost, Decimal("4.00"))
+
+    def test_finished_goods_unit_cost_uses_actual_output_quantity(self):
+        self._stock(10, 10)
+        run = schedule_run(self.recipe.pk, 20, date(2026, 2, 1))
+
+        complete_run(run.pk, actual_quantity=10)
+
+        finished_layer = FinishedGoodsCostLayer.objects.get(menu_item=self.item)
+        self.assertEqual(finished_layer.quantity, Decimal("10.00"))
+        self.assertEqual(finished_layer.unit_cost, Decimal("8.00"))
+
+    def test_production_without_consumption_cost_creates_unknown_cost_layer(self):
+        recipe_without_materials = Recipe.objects.create(
+            menu_item=self.item,
+            name="No material recipe",
+            yield_quantity=1,
+        )
+        run = schedule_run(recipe_without_materials.pk, 3, date(2026, 2, 1))
+
+        complete_run(run.pk)
+
+        finished_layer = FinishedGoodsCostLayer.objects.get(menu_item=self.item)
+        self.assertEqual(finished_layer.quantity, Decimal("3.00"))
+        self.assertIsNone(finished_layer.unit_cost)
 
     def test_insufficient_stock_flags_all_shortfalls_and_changes_nothing(self):
         self._stock(3, 0)

@@ -27,10 +27,16 @@ class RawMaterialSerializer(serializers.ModelSerializer):
 
 class MenuItemRestockSerializer(serializers.Serializer):
     quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    unit_cost = serializers.DecimalField(max_digits=12, decimal_places=2)
 
     def validate_quantity(self, value):
         if value <= 0:
             raise serializers.ValidationError("Restock quantity must be greater than zero.")
+        return value
+
+    def validate_unit_cost(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Unit cost cannot be negative.")
         return value
 
 
