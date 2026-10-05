@@ -15,7 +15,6 @@ import RecipesView from "./components/views/RecipesView";
 import ProductionView from "./components/views/ProductionView";
 import CalendarView from "./components/views/CalendarView";
 import ReportsView from "./components/views/ReportsView";
-import { initialPosProducts } from "./data/initialProducts";
 import { useNavigation } from "./hooks/useNavigation";
 import { useClients } from "./hooks/useClients";
 import { useInventory } from "./hooks/useInventory";
@@ -175,11 +174,14 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
   });
 
   // --- POS (src/hooks/usePos.ts) ---
-  const pos = usePos({ posProducts: initialPosProducts, createOrderFromSale });
+  const pos = usePos({ isActive: activeTab === "pos", createOrderFromSale });
   const {
     posCategory,
     setPosCategory,
     filteredPosProducts,
+    isCatalogLoading,
+    catalogError,
+    retryCatalogLoad,
     addToCart,
     cart,
     adjustCartQty,
@@ -344,6 +346,9 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
             posCategory={posCategory}
             setPosCategory={setPosCategory}
             filteredPosProducts={filteredPosProducts}
+            isCatalogLoading={isCatalogLoading}
+            catalogError={catalogError}
+            onRetryCatalogLoad={retryCatalogLoad}
             addToCart={addToCart}
             cart={cart}
             adjustCartQty={adjustCartQty}

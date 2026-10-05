@@ -13,6 +13,9 @@ interface PosViewProps {
   posCategory: PosCategory;
   setPosCategory: (category: PosCategory) => void;
   filteredPosProducts: PosProduct[];
+  isCatalogLoading: boolean;
+  catalogError: string | null;
+  onRetryCatalogLoad: () => void;
   addToCart: (product: PosProduct) => void;
   cart: CartItem[];
   adjustCartQty: (id: string, delta: number) => void;
@@ -31,6 +34,9 @@ export default function PosView({
   posCategory,
   setPosCategory,
   filteredPosProducts,
+  isCatalogLoading,
+  catalogError,
+  onRetryCatalogLoad,
   addToCart,
   cart,
   adjustCartQty,
@@ -76,22 +82,50 @@ export default function PosView({
         </div>
 
         <div className="flex-1 p-4 md:p-6 overflow-y-auto">
+          {isCatalogLoading ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4" role="status" aria-label="Loading POS products">
+              {Array.from({ length: 12 }, (_, index) => (
+                <div key={index} className="aspect-square rounded-xl bg-white border border-gray-200 animate-pulse" />
+              ))}
+            </div>
+          ) : catalogError ? (
+            <div className="max-w-xl mx-auto mt-10 rounded-lg border border-red-200 bg-white p-6 text-center" role="alert">
+              <p className="font-semibold text-red-700">POS products could not be loaded</p>
+              <p className="mt-2 text-sm text-gray-600">{catalogError}</p>
+              <button onClick={onRetryCatalogLoad} className="mt-4 rounded-lg bg-[#562D07] px-4 py-2 text-sm font-bold text-white hover:bg-[#3a1d04]">
+                Retry
+              </button>
+            </div>
+          ) : filteredPosProducts.length === 0 ? (
+            <div className="max-w-xl mx-auto mt-10 rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-500">
+              {posCategory === "All" ? "No menu items are available in Inventory yet." : `No ${posCategory.toLowerCase()} menu items are available.`}
+            </div>
+          ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
-            {filteredPosProducts.map((product) => (
+            {filteredPosProducts.map((product) => {
+              const outOfStock = product.availableStock <= 0;
+              return (
               <button
                 key={product.id}
                 onClick={() => addToCart(product)}
-                className={`relative w-full aspect-square rounded-xl shadow-sm hover:shadow-md transition-all transform active:scale-95 flex flex-col justify-between p-3 ${product.color} text-white overflow-hidden group`}
+                disabled={outOfStock}
+                aria-label={`${product.name}, ₱${product.price.toFixed(2)}, ${outOfStock ? "out of stock" : `${product.availableStock} available`}`}
+                className={`relative w-full aspect-square rounded-xl shadow-sm hover:shadow-md transition-all transform active:scale-95 flex flex-col justify-between p-3 ${product.color} text-white overflow-hidden group disabled:cursor-not-allowed disabled:opacity-45`}
               >
                 <span className="self-end text-sm font-bold opacity-90 drop-shadow-sm">
-                  ₱{product.price}
+                  ₱{product.price.toFixed(2)}
                 </span>
                 <span className="self-start text-left text-sm md:text-base font-bold leading-tight drop-shadow-sm group-hover:underline">
                   {product.name}
                 </span>
+                <span className="self-start text-xs font-semibold drop-shadow-sm">
+                  {outOfStock ? "Out of stock" : `${product.availableStock} ${product.unit || "available"}`}
+                </span>
               </button>
-            ))}
+              );
+            })}
           </div>
+          )}
         </div>
       </div>
 
@@ -207,6 +241,7 @@ export default function PosView({
                       </span>
                       <button
                         onClick={() => adjustCartQty(item.id, 1)}
+                        disabled={item.qty >= item.availableStock}
                         className="w-8 h-8 flex items-center justify-center bg-gray-50 hover:bg-gray-200 text-gray-600 transition-colors"
                       >
                         <svg

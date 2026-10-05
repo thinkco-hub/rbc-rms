@@ -161,7 +161,9 @@ export interface PosProduct {
   id: MenuItemId;
   name: string;
   price: Price;
-  category: PosCategory;
+  category: string;
+  unit: string;
+  availableStock: Quantity;
   color: string;
 }
 
