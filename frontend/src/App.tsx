@@ -144,7 +144,7 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
   });
 
   // --- ORDERS (src/hooks/useOrders.ts) ---
-  const ordersState = useOrders({ deductOrderLines: inventory.deductOrderLines });
+  const ordersState = useOrders();
   const {
     orders,
     viewingOrder,
