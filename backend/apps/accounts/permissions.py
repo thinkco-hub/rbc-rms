@@ -83,6 +83,11 @@ class ProductionPermission(HasPermissionCode):
     manage_permission = PRODUCTION_MANAGE
 
 
+class PosPermission(HasPermissionCode):
+    view_permission = POS_VIEW
+    manage_permission = POS_MANAGE
+
+
 class AccountsPermission(HasPermissionCode):
     view_permission = ACCOUNTS_MANAGE
     manage_permission = ACCOUNTS_MANAGE

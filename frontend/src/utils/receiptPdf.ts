@@ -57,15 +57,15 @@ export function downloadReceiptPdf(sale: Sale): void {
   kv("Customer", sale.customerName || "-");
   if (sale.customerContact) kv("Contact", sale.customerContact);
   kv("Payment", sale.paymentMethod);
-  if (sale.type === "Pre-Order") kv("Delivery", sale.deliveryDate);
-  kv("Date", new Date(sale.createdAt).toLocaleString());
+  if (sale.type === "Pre-Order" && sale.deliveryDate) kv("Delivery", sale.deliveryDate);
+  kv("Date", sale.createdAt ? new Date(sale.createdAt).toLocaleString() : "Date unavailable");
 
   divider();
 
   sale.items.forEach((item) => {
     const nameLines = doc.splitTextToSize(item.name, x1 - x0 - 14);
-    doc.text(`${item.qty}x ${nameLines[0]}`, x0, y);
-    doc.text(`PhP${(item.price * item.qty).toFixed(2)}`, x1, y, {
+    doc.text(`${item.qty} ${item.unit} @ PhP${item.price.toFixed(2)} ${nameLines[0]}`.trim(), x0, y);
+    doc.text(`PhP${item.lineTotal.toFixed(2)}`, x1, y, {
       align: "right",
     });
     y += LINE_H;
@@ -78,7 +78,11 @@ export function downloadReceiptPdf(sale: Sale): void {
   divider();
 
   kv("Subtotal", `PhP${sale.subtotal.toFixed(2)}`);
-  kv("Tax (5%)", `PhP${sale.tax.toFixed(2)}`);
+  if (sale.discount > 0) kv("Discount", `-PhP${sale.discount.toFixed(2)}`);
+  kv(
+    sale.taxRate === null ? "Tax" : `Tax (${sale.taxRate}%)`,
+    sale.tax === null ? "Unavailable" : `PhP${sale.tax.toFixed(2)}`
+  );
   doc.setFont("courier", "bold");
   doc.setFontSize(11);
   kv("TOTAL", `PhP${sale.total.toFixed(2)}`);
