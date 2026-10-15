@@ -1,88 +1,71 @@
-from datetime import timedelta
 from decimal import Decimal
 
-from django.core.exceptions import ValidationError
-from django.test import TestCase
-from django.utils import timezone
+from django.contrib.auth import get_user_model
+from rest_framework.test import APITestCase
 
 from apps.inventory.models import MenuItem
 
-from .models import Client, OrderItem
-from .services import create_pos_pre_order, resolve_pos_customer
+from .models import Client, Order
 
 
-class PosCustomerResolutionTests(TestCase):
-	def test_creates_customer_from_pos_name_and_contact(self):
-		client, created = resolve_pos_customer("  Jordan   Baker ", " 555 0100 ")
+class OrderManagementApiTests(APITestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.user = user_model.objects.create_superuser(
+            username="orders-test",
+            email="orders-test@example.com",
+            password="test-password",
+        )
+        self.client.force_authenticate(self.user)
+        self.client_record = Client.objects.create(
+            name="Test Cafe",
+            contact_info="09170000000",
+            email="test@example.com",
+        )
+        self.menu_item = MenuItem.objects.create(
+            name="Test Bread",
+            selling_price=Decimal("120.00"),
+            stock_quantity=Decimal("10.00"),
+        )
 
-		self.assertTrue(created)
-		self.assertEqual(client.name, "Jordan Baker")
-		self.assertEqual(client.contact_info, "555 0100")
+    def test_client_crud_and_order_creation(self):
+        response = self.client.post(
+            "/api/v1/orders/clients/",
+            {"name": "New Cafe", "contact": "09171111111", "email": "new@example.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        client_id = response.data["id"]
 
-	def test_contact_resolution_is_case_and_whitespace_insensitive(self):
-		existing = Client.objects.create(name="Existing Name", contact_info="555 0100")
+        response = self.client.post(
+            "/api/v1/orders/orders/",
+            {
+                "client_id": client_id,
+                "requested_delivery_date": "2026-10-10",
+                "notes": "Morning delivery",
+                "items": [{"menu_item_id": self.menu_item.pk, "quantity": "2"}],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["items"][0]["unit_price"], "120.00")
 
-		client, created = resolve_pos_customer("Updated Name", " 555   0100 ")
+    def test_delivery_deducts_stock_once_and_records_delivery(self):
+        order = Order.objects.create(client=self.client_record)
+        order.items.create(
+            menu_item=self.menu_item,
+            quantity=Decimal("2.00"),
+            unit_price=self.menu_item.selling_price,
+        )
 
-		self.assertFalse(created)
-		self.assertEqual(client.pk, existing.pk)
-		self.assertEqual(client.name, "Existing Name")
-
-	def test_duplicate_contacts_resolve_to_lowest_client_id(self):
-		first = Client.objects.create(name="First Record", contact_info="555-0100")
-		Client.objects.create(name="Duplicate Record", contact_info=" 555-0100 ")
-
-		client, created = resolve_pos_customer("New Name", "555-0100")
-
-		self.assertFalse(created)
-		self.assertEqual(client.pk, first.pk)
-
-	def test_missing_contact_resolves_only_contactless_matching_name(self):
-		with_contact = Client.objects.create(name="Same Name", contact_info="555-0100")
-		without_contact = Client.objects.create(name=" Same   Name ", contact_info="")
-
-		client, created = resolve_pos_customer("same name", "")
-
-		self.assertFalse(created)
-		self.assertEqual(client.pk, without_contact.pk)
-		self.assertNotEqual(client.pk, with_contact.pk)
-
-
-class PosPreOrderServiceTests(TestCase):
-	def setUp(self):
-		self.croissant = MenuItem.objects.create(name="Croissant", selling_price=120)
-		self.loaf = MenuItem.objects.create(name="Loaf", selling_price=200)
-
-	def test_creates_pending_order_and_item_lines_for_future_delivery(self):
-		delivery_date = timezone.localdate() + timedelta(days=3)
-		client, _ = resolve_pos_customer("Jordan Baker", "555-0100")
-
-		order = create_pos_pre_order(
-			customer_name="Jordan Baker",
-			customer_contact="555-0100",
-			delivery_date=delivery_date,
-			items=[
-				{"menu_item": self.croissant, "quantity": Decimal("2.00")},
-				{"menu_item": self.loaf, "quantity": Decimal("1.00")},
-			],
-		)
-
-		self.assertEqual(order.client_id, client.pk)
-		self.assertEqual(order.status, "pending")
-		self.assertEqual(order.requested_delivery_date, delivery_date)
-		self.assertCountEqual(
-			list(order.orderitem_set.values_list("menu_item_id", "quantity")),
-			[(self.croissant.pk, Decimal("2.00")), (self.loaf.pk, Decimal("1.00"))],
-		)
-
-	def test_rejects_missing_or_nonfuture_delivery_date(self):
-		for delivery_date in (None, timezone.localdate()):
-			with self.assertRaises(ValidationError):
-				create_pos_pre_order(
-					customer_name="Jordan Baker",
-					customer_contact="555-0100",
-					delivery_date=delivery_date,
-					items=[{"menu_item": self.croissant, "quantity": Decimal("1.00")}],
-				)
-		self.assertFalse(Client.objects.exists())
-		self.assertFalse(OrderItem.objects.exists())
+        response = self.client.post(
+            f"/api/v1/orders/orders/{order.pk}/mark_delivered/",
+            {},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.menu_item.refresh_from_db()
+        self.assertEqual(self.menu_item.stock_quantity, Decimal("8.00"))
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.STATUS_DELIVERED)
+        self.assertIsNotNone(order.delivered_at)

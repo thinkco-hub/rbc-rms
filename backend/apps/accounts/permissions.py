@@ -9,8 +9,8 @@ RECIPES_VIEW = "recipes.view"
 RECIPES_MANAGE = "recipes.manage"
 PRODUCTION_VIEW = "production.view"
 PRODUCTION_MANAGE = "production.manage"
-POS_VIEW = "pos.view"
-POS_MANAGE = "pos.manage"
+ORDERS_VIEW = "orders.view"
+ORDERS_MANAGE = "orders.manage"
 
 
 def _employee_permission_codes(user):
@@ -91,3 +91,8 @@ class PosPermission(HasPermissionCode):
 class AccountsPermission(HasPermissionCode):
     view_permission = ACCOUNTS_MANAGE
     manage_permission = ACCOUNTS_MANAGE
+
+
+class OrdersPermission(HasPermissionCode):
+    view_permission = ORDERS_VIEW
+    manage_permission = ORDERS_MANAGE
