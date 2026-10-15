@@ -12,6 +12,7 @@ from rest_framework.test import APIClient, APIRequestFactory
 
 from apps.accounts.models import Employee, Permission, Role, RolePermission
 from apps.inventory.models import FinishedGoodsCostLayer, MenuItem
+from apps.orders.models import Client, Order, OrderItem
 from apps.accounts.permissions import PosPermission
 
 from .models import PaymentMethod, PosRefund, PosRefundItem, PosTransaction, PosTransactionItem
@@ -516,6 +517,91 @@ class PosCatalogAndCheckoutApiTests(TestCase):
 		self.assertEqual(detail.data["payment_reference"], "reference-123")
 		self.assertEqual(detail.data["notes"], "No substitutions")
 		self.assertEqual(len(detail.data["items"]), 1)
+
+	def test_future_delivery_creates_linked_order_without_deducting_stock(self):
+		from datetime import timedelta
+		from django.utils import timezone
+
+		payload = self._payload()
+		payload["delivery_date"] = (timezone.localdate() + timedelta(days=3)).isoformat()
+
+		response = self.client.post(POS_TRANSACTIONS_URL, payload, format="json")
+
+		self.assertEqual(response.status_code, 201)
+		transaction_record = PosTransaction.objects.get(pk=response.data["id"])
+		order = Order.objects.get(pk=transaction_record.order_id)
+		self.assertEqual(response.data["order_id"], order.pk)
+		self.assertEqual(order.client.name, "Test Customer")
+		self.assertEqual(order.client.contact_info, "555-0100")
+		self.assertEqual(order.status, "pending")
+		self.assertEqual(order.requested_delivery_date, timezone.localdate() + timedelta(days=3))
+		self.assertEqual(
+			list(OrderItem.objects.filter(order=order).values_list("menu_item_id", "quantity")),
+			[(self.product.pk, Decimal("2.00"))],
+		)
+		line = transaction_record.postransactionitem_set.get()
+		self.assertEqual(line.unit_price, Decimal("100.00"))
+		self.assertIsNone(line.unit_cogs)
+		self.assertIsNone(line.total_cogs)
+		self.product.refresh_from_db()
+		self.layer.refresh_from_db()
+		self.assertEqual(self.product.stock_quantity, Decimal("10.00"))
+		self.assertEqual(self.layer.quantity_remaining, Decimal("10.00"))
+		self.assertEqual(transaction_record.payment_status, PosTransaction.PaymentStatus.PAID)
+		self.assertEqual(transaction_record.amount_paid, Decimal("210.00"))
+
+	def test_future_order_resolves_existing_customer_by_normalized_contact(self):
+		from datetime import timedelta
+		from django.utils import timezone
+
+		existing = Client.objects.create(name="Existing Customer", contact_info=" 555-0100 ")
+		payload = self._payload()
+		payload["delivery_date"] = (timezone.localdate() + timedelta(days=1)).isoformat()
+
+		response = self.client.post(POS_TRANSACTIONS_URL, payload, format="json")
+
+		self.assertEqual(response.status_code, 201)
+		order = Order.objects.get(pk=response.data["order_id"])
+		self.assertEqual(order.client_id, existing.pk)
+		self.assertEqual(Client.objects.count(), 1)
+
+	def test_preorder_line_failure_rolls_back_sale_customer_and_order(self):
+		from datetime import timedelta
+		from django.utils import timezone
+
+		payload = self._payload()
+		payload["delivery_date"] = (timezone.localdate() + timedelta(days=1)).isoformat()
+		with patch(
+			"apps.orders.services.OrderItem.objects.bulk_create",
+			side_effect=IntegrityError("simulated order-line insert failure"),
+		):
+			with self.assertRaises(IntegrityError):
+				self.client.post(POS_TRANSACTIONS_URL, payload, format="json")
+
+		self.assertFalse(PosTransaction.objects.exists())
+		self.assertFalse(Order.objects.exists())
+		self.assertFalse(Client.objects.exists())
+		self.assertFalse(OrderItem.objects.exists())
+		self.product.refresh_from_db()
+		self.layer.refresh_from_db()
+		self.assertEqual(self.product.stock_quantity, Decimal("10.00"))
+		self.assertEqual(self.layer.quantity_remaining, Decimal("10.00"))
+
+	def test_past_delivery_date_rejects_preorder_without_mutation(self):
+		from datetime import timedelta
+		from django.utils import timezone
+
+		payload = self._payload()
+		payload["delivery_date"] = (timezone.localdate() - timedelta(days=1)).isoformat()
+
+		response = self.client.post(POS_TRANSACTIONS_URL, payload, format="json")
+
+		self.assertEqual(response.status_code, 400)
+		self.assertFalse(PosTransaction.objects.exists())
+		self.assertFalse(Order.objects.exists())
+		self.assertFalse(Client.objects.exists())
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.stock_quantity, Decimal("10.00"))
 
 	def test_atomic_rollback_if_line_snapshot_write_fails(self):
 		with patch(

@@ -95,12 +95,14 @@ class PosTransactionItemSerializer(serializers.ModelSerializer):
 
 class PosTransactionSerializer(serializers.ModelSerializer):
 	id = serializers.IntegerField(source="transaction_id", read_only=True)
+	order_id = serializers.IntegerField(read_only=True)
 	items = PosTransactionItemSerializer(source="postransactionitem_set", many=True, read_only=True)
 
 	class Meta:
 		model = PosTransaction
 		fields = [
 			"id",
+			"order_id",
 			"status",
 			"payment_status",
 			"payment_method",

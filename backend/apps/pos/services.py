@@ -6,8 +6,9 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from apps.inventory.models import FinishedGoodsCostLayer, MenuItem
+from apps.inventory.models import MenuItem
 from apps.inventory.services import deduct_finished_goods_stock
+from apps.orders.services import create_pos_pre_order
 
 from .models import PosTransaction, PosTransactionItem
 
@@ -78,6 +79,8 @@ def complete_sale(data, cashier=None):
 		menu_item_id = int(line["menu_item_id"])
 		quantities[menu_item_id] = quantities.get(menu_item_id, ZERO) + line["quantity"]
 	menu_item_ids = sorted(quantities)
+	delivery_date = data.get("delivery_date")
+	is_pre_order = delivery_date is not None and delivery_date > timezone.localdate()
 
 	try:
 		with transaction.atomic():
@@ -133,13 +136,27 @@ def complete_sale(data, cashier=None):
 	tax_amount = _ensure_money_range(subtotal * TAX_RATE / Decimal("100"), "Tax")
 	total_amount = _ensure_money_range(subtotal + tax_amount, "Total")
 
-	stock_result = deduct_finished_goods_stock([
-		{"menu_item_id": item_id, "quantity": quantities[item_id]}
-		for item_id in menu_item_ids
-	])
-	cogs_by_item = {item_id: ZERO for item_id in menu_item_ids}
-	for allocation in stock_result["allocations"]:
-		cogs_by_item[allocation["menu_item_id"]] += allocation["total_cogs"]
+	cogs_by_item = {item_id: None if is_pre_order else ZERO for item_id in menu_item_ids}
+	if is_pre_order:
+		# Future orders reserve demand only. Finished stock and FIFO costs change
+		# when a fulfillment workflow exists and actually fulfills the order.
+		order = create_pos_pre_order(
+			customer_name=data["customer_name"],
+			customer_contact=data.get("customer_contact", ""),
+			delivery_date=delivery_date,
+			items=[
+				{"menu_item": products_by_id[item_id], "quantity": quantities[item_id]}
+				for item_id in menu_item_ids
+			],
+		)
+		pos_transaction.order = order
+	else:
+		stock_result = deduct_finished_goods_stock([
+			{"menu_item_id": item_id, "quantity": quantities[item_id]}
+			for item_id in menu_item_ids
+		])
+		for allocation in stock_result["allocations"]:
+			cogs_by_item[allocation["menu_item_id"]] += allocation["total_cogs"]
 
 	PosTransactionItem.objects.bulk_create([
 		PosTransactionItem(
@@ -151,7 +168,11 @@ def complete_sale(data, cashier=None):
 			unit_price=products_by_id[item_id].selling_price,
 			discount_amount=ZERO,
 			line_total=line_totals[item_id],
-			unit_cogs=(cogs_by_item[item_id] / quantities[item_id]).quantize(CENT, ROUND_HALF_UP),
+			unit_cogs=(
+				(cogs_by_item[item_id] / quantities[item_id]).quantize(CENT, ROUND_HALF_UP)
+				if cogs_by_item[item_id] is not None
+				else None
+			),
 			total_cogs=cogs_by_item[item_id],
 		)
 		for item_id in menu_item_ids
@@ -174,5 +195,6 @@ def complete_sale(data, cashier=None):
 		"amount_paid",
 		"payment_status",
 		"status",
+		"order",
 	])
 	return pos_transaction, True

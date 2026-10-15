@@ -72,8 +72,8 @@ class PosTransactionItem(models.Model):
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     line_total = models.DecimalField(max_digits=12, decimal_places=2)
-    unit_cogs = models.DecimalField(max_digits=12, decimal_places=2)
-    total_cogs = models.DecimalField(max_digits=12, decimal_places=2)
+    unit_cogs = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    total_cogs = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
 
 
 class PosRefund(models.Model):
