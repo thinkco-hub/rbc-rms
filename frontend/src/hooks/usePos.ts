@@ -158,6 +158,16 @@ function checkoutErrorMessage(error: unknown): string {
   return error.message;
 }
 
+function receiptErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401) return "Your session has expired. Sign in again to view this receipt.";
+    if (error.status === 403) return "Your account is not permitted to view this transaction.";
+    if (error.status === 404) return "This transaction could not be found.";
+    return error.message;
+  }
+  return error instanceof Error ? error.message : "Could not load this receipt.";
+}
+
 /**
  * Owns the POS feature: product category filter, cart, checkout confirmation
  * modal, completed sales, receipts and the resizable ticket panel.
@@ -217,6 +227,8 @@ export function usePos({ isActive, onStockUpdated }: UsePosOptions) {
   const [salesLoading, setSalesLoading] = useState(true);
   const [salesError, setSalesError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Sale | null>(null);
+	const [receiptLoading, setReceiptLoading] = useState(false);
+	const [receiptError, setReceiptError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
@@ -422,6 +434,28 @@ export function usePos({ isActive, onStockUpdated }: UsePosOptions) {
     setConfirmModal(EMPTY_CONFIRM_MODAL);
   };
 
+  const openReceipt = async (transactionId: string) => {
+    setReceipt(null);
+    setReceiptError(null);
+    setReceiptLoading(true);
+    try {
+      const transaction = await api.get<unknown>(
+        `/api/v1/pos/transactions/${encodeURIComponent(transactionId)}/`
+      );
+      setReceipt(toSale(transaction));
+    } catch (error) {
+      setReceiptError(receiptErrorMessage(error));
+    } finally {
+      setReceiptLoading(false);
+    }
+  };
+
+  const closeReceipt = () => {
+    setReceipt(null);
+    setReceiptError(null);
+    setReceiptLoading(false);
+  };
+
   const isConfirmOrderDisabled =
     !confirmModal.paymentMethod || !confirmModal.customerName.trim();
 
@@ -447,6 +481,10 @@ export function usePos({ isActive, onStockUpdated }: UsePosOptions) {
     sales,
     receipt,
     setReceipt,
+  receiptLoading,
+  receiptError,
+  openReceipt,
+  closeReceipt,
     cartWidth,
     isResizing,
     startResizing,

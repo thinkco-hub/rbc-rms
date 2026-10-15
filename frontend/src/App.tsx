@@ -198,7 +198,10 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
     completeSale,
     sales,
     receipt,
-    setReceipt,
+  receiptLoading,
+  receiptError,
+  openReceipt,
+  closeReceipt,
     cartWidth,
     isResizing,
     startResizing,
@@ -294,8 +297,13 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
       )}
 
       {/* RECEIPT MODAL (extracted to src/components/pos/ReceiptModal.tsx) */}
-      {receipt && (
-        <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />
+    {(receipt || receiptLoading || receiptError) && (
+      <ReceiptModal
+        receipt={receipt}
+        isLoading={receiptLoading}
+        error={receiptError}
+        onClose={closeReceipt}
+      />
       )}
 
       {/* MOBILE TOP BAR (extracted to src/components/layout/MobileTopBar.tsx) */}
@@ -492,7 +500,7 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
             sales={sales}
             salesLoading={salesLoading}
             salesError={salesError}
-            onReprintSale={setReceipt}
+            onReprintSale={openReceipt}
             expenses={expenses}
             dayClosings={dayClosings}
             onAddExpense={addExpense}

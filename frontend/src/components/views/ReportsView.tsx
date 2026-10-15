@@ -20,7 +20,7 @@ interface ReportsViewProps {
   sales: Sale[];
   salesLoading: boolean;
   salesError: string | null;
-  onReprintSale: (sale: Sale | null) => void;
+  onReprintSale: (transactionId: string) => void;
   expenses: Expense[];
   dayClosings: DayClosing[];
   onAddExpense: (data: ExpenseData) => void;

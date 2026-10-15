@@ -34,7 +34,7 @@ function StatCard({
 
 interface ReportsDashboardProps {
   sales: Sale[];
-  onReprintSale?: (sale: Sale) => void;
+  onReprintSale?: (transactionId: string) => void;
 }
 
 export default function ReportsDashboard({ sales, onReprintSale }: ReportsDashboardProps) {
@@ -202,7 +202,7 @@ export default function ReportsDashboard({ sales, onReprintSale }: ReportsDashbo
                     <td className="px-6 py-3 text-right font-semibold text-gray-900">₱{sale.total.toFixed(2)}</td>
                     <td className="px-6 py-3 text-right">
                       <button
-                        onClick={() => onReprintSale?.(sale)}
+                        onClick={() => onReprintSale?.(sale.id)}
                         title="View / Print Receipt"
                         className="p-2 rounded-lg text-gray-400 hover:text-[#F17D0C] hover:bg-orange-50 transition-colors"
                       >

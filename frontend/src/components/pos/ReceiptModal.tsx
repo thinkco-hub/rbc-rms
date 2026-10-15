@@ -2,11 +2,13 @@ import React from "react";
 import type { Sale } from "../../types/domain";
 
 interface ReceiptModalProps {
-  receipt: Sale;
+  receipt: Sale | null;
+  isLoading: boolean;
+  error: string | null;
   onClose: () => void;
 }
 
-export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
+export default function ReceiptModal({ receipt, isLoading, error, onClose }: ReceiptModalProps) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 print:bg-white print:static"
@@ -17,6 +19,21 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
       }}
     >
       <div className="print-receipt bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto animate-fadeIn print:shadow-none print:rounded-none">
+        {!receipt && isLoading && (
+          <div role="status" className="py-10 text-center text-sm text-gray-500">
+            Loading transaction receipt...
+          </div>
+        )}
+        {!receipt && !isLoading && error && (
+          <div role="alert" className="py-8 text-center">
+            <p className="font-semibold text-red-700">Receipt unavailable</p>
+            <p className="mt-2 text-sm text-gray-600">{error}</p>
+            <button onClick={onClose} className="mt-5 w-full rounded-lg border border-gray-300 py-3 font-bold text-gray-700 hover:bg-gray-100">
+              Close
+            </button>
+          </div>
+        )}
+        {receipt && <>
         <div className="text-center mb-6">
           <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
             <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,6 +145,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
             Download Receipt
           </button>
         </div>
+        </>}
       </div>
     </div>
   );
