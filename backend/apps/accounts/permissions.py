@@ -11,6 +11,8 @@ PRODUCTION_VIEW = "production.view"
 PRODUCTION_MANAGE = "production.manage"
 ORDERS_VIEW = "orders.view"
 ORDERS_MANAGE = "orders.manage"
+POS_VIEW = "pos.view"
+POS_MANAGE = "pos.manage"
 
 
 def _employee_permission_codes(user):
