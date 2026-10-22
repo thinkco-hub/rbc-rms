@@ -38,6 +38,7 @@ export default function NumericField({
   const [error, setError] = useState("");
 
   const pattern = allowDecimal ? DECIMAL_PATTERN : INTEGER_PATTERN;
+  const hasWidthClass = /(^|\s)w-/.test(className);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const next = e.target.value;
@@ -67,7 +68,7 @@ export default function NumericField({
         required={required}
         disabled={disabled}
         aria-invalid={error ? true : undefined}
-        className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 outline-none text-gray-800 transition-colors ${
+        className={`${hasWidthClass ? "" : "w-full"} px-4 py-2.5 border rounded-lg focus:ring-2 outline-none text-gray-800 transition-colors ${
           error
             ? "border-red-500 bg-red-50 focus:ring-red-400 focus:border-red-500"
             : "border-gray-300 focus:ring-[#F17D0C] focus:border-[#F17D0C]"
