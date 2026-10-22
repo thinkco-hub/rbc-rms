@@ -48,9 +48,9 @@ def create_pos_pre_order(*, customer_name, customer_contact, delivery_date, item
 	"""Create only the order side of a future-dated POS sale.
 
 	Call this inside the POS checkout transaction. `items` contains resolved
-MenuItem objects and authoritative quantities; OrderItem stores only the
-MenuItem relation and quantity. The linked POS transaction lines retain the
-authoritative price snapshots.
+MenuItem objects and authoritative quantities; OrderItem records the price
+locked at checkout. The linked POS transaction lines retain the authoritative
+price snapshots.
 	"""
 	if delivery_date is None or delivery_date <= timezone.localdate():
 		raise ValidationError("A POS pre-order requires a future delivery date.")
@@ -64,7 +64,12 @@ authoritative price snapshots.
 		requested_delivery_date=delivery_date,
 	)
 	OrderItem.objects.bulk_create([
-		OrderItem(order=order, menu_item=item["menu_item"], quantity=item["quantity"])
+		OrderItem(
+			order=order,
+			menu_item=item["menu_item"],
+			quantity=item["quantity"],
+			unit_price=item["menu_item"].selling_price,
+		)
 		for item in items
 	])
 	return order
