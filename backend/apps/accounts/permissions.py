@@ -13,6 +13,8 @@ ORDERS_VIEW = "orders.view"
 ORDERS_MANAGE = "orders.manage"
 POS_VIEW = "pos.view"
 POS_MANAGE = "pos.manage"
+REPORTS_VIEW = "reports.view"
+REPORTS_MANAGE = "reports.manage"
 
 
 def _employee_permission_codes(user):
@@ -98,3 +100,8 @@ class AccountsPermission(HasPermissionCode):
 class OrdersPermission(HasPermissionCode):
     view_permission = ORDERS_VIEW
     manage_permission = ORDERS_MANAGE
+
+
+class ReportsPermission(HasPermissionCode):
+    view_permission = REPORTS_VIEW
+    manage_permission = REPORTS_MANAGE

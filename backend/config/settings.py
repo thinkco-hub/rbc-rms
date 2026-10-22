@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     "apps.production",
     "apps.orders",
     "apps.pos",
+    "apps.reports",
     "apps.chams",
     "apps.calendar_sync",
     "apps.core",
