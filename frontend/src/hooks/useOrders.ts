@@ -1,151 +1,120 @@
-import { useState } from "react";
-import { initialOrders } from "../data/initialOrders";
+import { useEffect, useState } from "react";
+import { api } from "../api/client";
 import type {
-  ClientId,
-  CreateOrderData,
-  Order,
-  OrderDeliveryInput,
-  OrderId,
-  OrderItem,
-  OrderPaymentInput,
-  OrderStatus,
-  Sale,
+  ClientId, CreateOrderData, Order, OrderDeliveryInput, OrderId, OrderItem,
+  OrderPaymentInput, OrderStatus, PaymentMethod, Sale,
 } from "../types/domain";
 
-// Monotonic order-number counter. Seeds past the highest seeded order so new
-// IDs never collide with the initial data (or with each other after deletes).
-let nextOrderSeq = 1048 + initialOrders.length;
-const nextOrderId = (): OrderId => `#${nextOrderSeq++}`;
-
-/** Shared order construction for createOrder / createOrderFromSale. */
-const buildOrder = (
-  id: OrderId,
-  data: Omit<CreateOrderData, "clientId"> & {
-    clientId: ClientId | null;
-    customerName?: string;
-  }
-): Order => ({
-  id,
-  clientId: data.clientId,
-  customerName: data.customerName,
-  items: data.items,
-  requestedDate: data.requestedDate,
-  status: "Pending",
-  notes: data.notes,
-  deliveryDate: null,
-  assignedTo: null,
-  createdAt: new Date().toISOString().slice(0, 10),
-  deliveredAt: null,
-  paymentMethod: null,
-  amountPaid: 0,
-});
-
-interface UseOrdersOptions {
-  /**
-   * Inventory-owned deduction applied when an order is delivered. Injected by
-   * the app shell so stock updates stay owned by useInventory.
-   */
-  deductOrderLines: (lines: OrderItem[]) => void;
+interface BackendOrderItem {
+  id: number;
+  menu_item_id: number;
+  quantity: string | number;
+  unit_price: string | number;
+}
+interface BackendOrder {
+  id: number;
+  client_id: number | null;
+  customer_name: string;
+  status: "pending" | "in_production" | "ready" | "delivered";
+  requested_delivery_date: string | null;
+  notes: string;
+  created_at: string;
+  delivered_at: string | null;
+  payment_method: PaymentMethod | null;
+  amount_paid: string | number;
+  items: BackendOrderItem[];
+  delivery: { scheduled_date: string; assigned_staff: string } | null;
 }
 
-/**
- * Owns the orders feature: the order list and the order detail panel
- * (viewingOrder), including payment recording, status changes, scheduling
- * and delivery.
- */
-export function useOrders({ deductOrderLines }: UseOrdersOptions) {
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+const statusToUi: Record<BackendOrder["status"], OrderStatus> = {
+  pending: "Pending", in_production: "In Production", ready: "Ready", delivered: "Delivered",
+};
+const statusToApi: Record<OrderStatus, BackendOrder["status"]> = {
+  Pending: "pending", "In Production": "in_production", Ready: "ready", Delivered: "delivered",
+};
+const toId = (id: number) => `#${id}`;
+const clientId = (id: number | null): ClientId | null =>
+  id === null ? null : `CL-${String(id).padStart(3, "0")}`;
+const backendClientId = (id: ClientId | null) => id ? Number(id.replace(/^CL-/, "")) : null;
+
+const toOrder = (order: BackendOrder): Order => ({
+  id: toId(order.id),
+  clientId: clientId(order.client_id),
+  customerName: order.customer_name || undefined,
+  items: order.items.map((item): OrderItem => ({
+    menuItemId: String(item.menu_item_id),
+    qty: Number(item.quantity),
+    unitPrice: Number(item.unit_price),
+  })),
+  requestedDate: order.requested_delivery_date || order.created_at,
+  status: statusToUi[order.status],
+  notes: order.notes,
+  deliveryDate: order.delivery?.scheduled_date || null,
+  assignedTo: order.delivery?.assigned_staff || null,
+  createdAt: order.created_at,
+  deliveredAt: order.delivered_at,
+  paymentMethod: order.payment_method,
+  amountPaid: Number(order.amount_paid),
+});
+
+const backendOrderId = (id: OrderId) => Number(id.replace(/^#/, ""));
+
+export function useOrders() {
+  const [orders, setOrders] = useState<Order[]>([]);
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
 
-  const createOrder = (data: CreateOrderData) => {
-    setOrders((prev) => [buildOrder(nextOrderId(), data), ...prev]);
+  useEffect(() => {
+    api.get<BackendOrder[]>("/api/v1/orders/orders/")
+      .then((data) => setOrders(data.map(toOrder)))
+      .catch(() => setOrders([]));
+  }, []);
+
+  const replaceOrder = (updated: BackendOrder) => {
+    const order = toOrder(updated);
+    setOrders((prev) => prev.map((item) => item.id === order.id ? order : item));
+    setViewingOrder((prev) => prev?.id === order.id ? order : prev);
   };
 
-  const createOrderFromSale = (sale: Sale) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const order: Order = buildOrder(nextOrderId(), {
-      clientId: null,
-      customerName: sale.customerName,
-      items: sale.items.map((item) => ({
-        menuItemId: item.id,
-        name: item.name,
-        qty: item.qty,
-        unitPrice: item.price,
+  const createOrder = async (data: CreateOrderData) => {
+    const created = await api.post<BackendOrder>("/api/v1/orders/orders/", {
+      client_id: backendClientId(data.clientId),
+      requested_delivery_date: data.requestedDate,
+      notes: data.notes,
+      items: data.items.map((item) => ({
+        menu_item_id: Number(item.menuItemId),
+        quantity: item.qty,
       })),
-      requestedDate: today,
-      notes: sale.notes
-        ? `Placed via POS Pre-Order — ${sale.notes}`
-        : "Placed via POS Pre-Order",
     });
-    setOrders((prev) => [
-      {
-        ...order,
-        deliveryDate: sale.deliveryDate,
-        paymentMethod: sale.paymentMethod,
-        amountPaid: sale.total,
-      },
-      ...prev,
-    ]);
+    setOrders((prev) => [toOrder(created), ...prev]);
   };
 
-  /**
-   * Applies a patch to `orders`, mirroring it into `viewingOrder` if shown.
-   * The patch may be a plain object or a function of the current order so the
-   * two states can never drift apart.
-   */
-  const patchOrder = (
-    id: OrderId,
-    patch: Partial<Order> | ((order: Order) => Partial<Order>)
-  ) => {
-    const apply = (o: Order): Order => ({
-      ...o,
-      ...(typeof patch === "function" ? patch(o) : patch),
+  const createOrderFromSale = async (sale: Sale) => {
+    const created = await api.post<BackendOrder>("/api/v1/orders/orders/", {
+      client_id: null,
+      customer_name: sale.customerName,
+      requested_delivery_date: new Date().toISOString().slice(0, 10),
+      notes: sale.notes ? `Placed via POS Pre-Order — ${sale.notes}` : "Placed via POS Pre-Order",
+      items: sale.items.map((item) => ({ menu_item_id: Number(item.id), quantity: item.qty })),
     });
-    setOrders((prev) => prev.map((o) => (o.id === id ? apply(o) : o)));
-    setViewingOrder((prev) => (prev && prev.id === id ? apply(prev) : prev));
+    setOrders((prev) => [toOrder(created), ...prev]);
   };
 
-  const recordOrderPayment = (id: OrderId, { method, amount }: OrderPaymentInput) => {
-    patchOrder(id, (o) => ({
-      paymentMethod: method,
-      amountPaid: (o.amountPaid || 0) + amount,
-    }));
+  const orderRequest = async (id: OrderId, action: string, body: unknown) => {
+    const updated = await api.post<BackendOrder>(`/api/v1/orders/orders/${backendOrderId(id)}/${action}/`, body);
+    replaceOrder(updated);
   };
 
-  const advanceOrderStatus = (id: OrderId, status: OrderStatus | null) => {
-    if (!status) return;
-    patchOrder(id, { status });
-  };
-
-  const scheduleOrderDelivery = (
-    id: OrderId,
-    { deliveryDate, assignedTo }: OrderDeliveryInput
-  ) => {
-    patchOrder(id, { deliveryDate, assignedTo });
-  };
-
-  const markOrderDelivered = (id: OrderId) => {
-    const order = orders.find((o) => o.id === id);
-    if (!order) return;
-    const deliveredAt = new Date().toISOString().slice(0, 10);
-
-    deductOrderLines(order.items);
-
-    patchOrder(id, { status: "Delivered", deliveredAt });
-  };
-
-  const clearViewingOrder = () => setViewingOrder(null);
+  const recordOrderPayment = (id: OrderId, input: OrderPaymentInput) =>
+    orderRequest(id, "record_payment", input);
+  const advanceOrderStatus = (id: OrderId, status: OrderStatus | null) =>
+    status && orderRequest(id, "advance_status", { status: statusToApi[status] });
+  const scheduleOrderDelivery = (id: OrderId, input: OrderDeliveryInput) =>
+    orderRequest(id, "schedule_delivery", { delivery_date: input.deliveryDate, assigned_to: input.assignedTo });
+  const markOrderDelivered = (id: OrderId) => orderRequest(id, "mark_delivered", {});
 
   return {
-    orders,
-    viewingOrder,
-    setViewingOrder,
-    createOrder,
-    createOrderFromSale,
-    recordOrderPayment,
-    advanceOrderStatus,
-    scheduleOrderDelivery,
-    markOrderDelivered,
-    clearViewingOrder,
+    orders, viewingOrder, setViewingOrder, createOrder, createOrderFromSale,
+    recordOrderPayment, advanceOrderStatus, scheduleOrderDelivery, markOrderDelivered,
+    clearViewingOrder: () => setViewingOrder(null),
   };
 }

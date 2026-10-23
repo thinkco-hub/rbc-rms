@@ -13,7 +13,7 @@ import type {
 } from "../types/domain";
 
 export function saleDateKey(sale: Sale): ISODate {
-  return sale.createdAt.slice(0, 10);
+  return sale.createdAt?.slice(0, 10) || "";
 }
 
 export function filterSalesByRange(
@@ -24,6 +24,7 @@ export function filterSalesByRange(
   if (!startDate && !endDate) return sales;
   return sales.filter((sale) => {
     const key = saleDateKey(sale);
+    if (!key) return false;
     if (startDate && key < startDate) return false;
     if (endDate && key > endDate) return false;
     return true;
@@ -55,7 +56,7 @@ export function getPresetRange(
 
 export function computeSalesSummary(sales: Sale[]): SalesSummary {
   const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0);
-  const totalTax = sales.reduce((sum, s) => sum + s.tax, 0);
+  const totalTax = sales.reduce((sum, s) => sum + (s.tax ?? 0), 0);
   const totalTransactions = sales.length;
   const avgTicket = totalTransactions ? totalRevenue / totalTransactions : 0;
   return { totalRevenue, totalTax, totalTransactions, avgTicket };
@@ -95,6 +96,7 @@ export function getRevenueByDay(sales: Sale[]): RevenueByDay[] {
   const map = new Map<ISODate, number>();
   sales.forEach((sale) => {
     const key = saleDateKey(sale);
+    if (!key) return;
     map.set(key, (map.get(key) || 0) + sale.total);
   });
   return Array.from(map.entries())
@@ -129,13 +131,13 @@ export function salesToCSV(sales: Sale[]): string {
   ];
   const rows = sales.map((sale): unknown[] => [
     sale.id,
-    new Date(sale.createdAt).toLocaleString(),
+    sale.createdAt ? new Date(sale.createdAt).toLocaleString() : "Date unavailable",
     sale.type,
     sale.customerName,
     sale.paymentMethod,
     sale.items.map((i) => `${i.qty}x ${i.name}`).join("; "),
     sale.subtotal.toFixed(2),
-    sale.tax.toFixed(2),
+    sale.tax === null ? "Unavailable" : sale.tax.toFixed(2),
     sale.total.toFixed(2),
   ]);
   return [header, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");

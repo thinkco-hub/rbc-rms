@@ -34,7 +34,7 @@ function StatCard({
 
 interface ReportsDashboardProps {
   sales: Sale[];
-  onReprintSale?: (sale: Sale) => void;
+  onReprintSale?: (transactionId: string) => void;
 }
 
 export default function ReportsDashboard({ sales, onReprintSale }: ReportsDashboardProps) {
@@ -48,7 +48,9 @@ export default function ReportsDashboard({ sales, onReprintSale }: ReportsDashbo
   }, [preset, customStart, customEnd]);
 
   const filteredSales = useMemo(() => {
-    return filterSalesByRange(sales, range.start, range.end).slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    return filterSalesByRange(sales, range.start, range.end).slice().sort((a, b) =>
+      (a.createdAt || "") < (b.createdAt || "") ? 1 : -1
+    );
   }, [sales, range.start, range.end]);
 
   const summary = useMemo(() => computeSalesSummary(filteredSales), [filteredSales]);
@@ -193,14 +195,14 @@ export default function ReportsDashboard({ sales, onReprintSale }: ReportsDashbo
                 filteredSales.map((sale) => (
                   <tr key={sale.id} className="hover:bg-gray-50/50">
                     <td className="px-6 py-3 font-medium text-gray-900">{sale.id}</td>
-                    <td className="px-6 py-3 text-gray-600">{new Date(sale.createdAt).toLocaleString()}</td>
+                    <td className="px-6 py-3 text-gray-600">{sale.createdAt ? new Date(sale.createdAt).toLocaleString() : "Date unavailable"}</td>
                     <td className="px-6 py-3 text-gray-600">{sale.type}</td>
                     <td className="px-6 py-3 text-gray-800">{sale.customerName}</td>
                     <td className="px-6 py-3 text-gray-600">{sale.paymentMethod}</td>
                     <td className="px-6 py-3 text-right font-semibold text-gray-900">₱{sale.total.toFixed(2)}</td>
                     <td className="px-6 py-3 text-right">
                       <button
-                        onClick={() => onReprintSale?.(sale)}
+                        onClick={() => onReprintSale?.(sale.id)}
                         title="View / Print Receipt"
                         className="p-2 rounded-lg text-gray-400 hover:text-[#F17D0C] hover:bg-orange-50 transition-colors"
                       >

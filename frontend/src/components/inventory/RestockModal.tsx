@@ -1,4 +1,5 @@
 import React from "react";
+import NumericField from "../common/NumericField";
 import type { RestockModalState, StockItem } from "../../types/domain";
 
 interface RestockModalProps {
@@ -52,16 +53,12 @@ export default function RestockModal({
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Quantity to Add
-            </label>
-            <input
-              type="number"
+            <NumericField
+              label="Quantity to Add"
               min="1"
               placeholder="Enter amount..."
               value={modal.amountToAdd}
-              onChange={(e) => onAmountChange(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              onChange={onAmountChange}
             />
           </div>
 

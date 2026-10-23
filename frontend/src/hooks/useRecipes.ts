@@ -63,6 +63,15 @@ export function useRecipes() {
   }, []);
 
   const saveRecipe = async (recipe: RecipeInput) => {
+    try {
+      await saveRecipeInternal(recipe);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Failed to save recipe.");
+      throw requestError;
+    }
+  };
+
+  const saveRecipeInternal = async (recipe: RecipeInput) => {
     const menuItemPayload = {
       name: recipe.name,
       unit: recipe.yieldUnit || "",
@@ -79,7 +88,7 @@ export function useRecipes() {
     const recipePayload = {
       menu_item_id: menuItem.id,
       name: recipe.name,
-      yield_quantity: recipe.yieldQty || 0,
+      yield_quantity: recipe.yieldQty || 1,
       yield_unit: recipe.yieldUnit || "",
       target_margin_percent: Number(pricingRules.targetMarginPercent) || 0,
       ingredients: recipe.ingredients.map((line) => ({

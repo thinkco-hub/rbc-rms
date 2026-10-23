@@ -15,7 +15,6 @@ import RecipesView from "./components/views/RecipesView";
 import ProductionView from "./components/views/ProductionView";
 import CalendarView from "./components/views/CalendarView";
 import ReportsView from "./components/views/ReportsView";
-import { initialPosProducts } from "./data/initialProducts";
 import { useNavigation } from "./hooks/useNavigation";
 import { useClients } from "./hooks/useClients";
 import { useInventory } from "./hooks/useInventory";
@@ -131,6 +130,7 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
   } = useRecipes();
 
   // --- PRODUCTION RUNS (src/hooks/useProduction.ts) ---
+  const [productionPrefillRecipeId, setProductionPrefillRecipeId] = React.useState<string | null>(null);
   const {
     productionRuns,
     scheduleProductionRun,
@@ -143,13 +143,12 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
   });
 
   // --- ORDERS (src/hooks/useOrders.ts) ---
-  const ordersState = useOrders({ deductOrderLines: inventory.deductOrderLines });
+  const ordersState = useOrders();
   const {
     orders,
     viewingOrder,
     setViewingOrder,
     createOrder,
-    createOrderFromSale,
     recordOrderPayment,
     advanceOrderStatus,
     scheduleOrderDelivery,
@@ -174,11 +173,17 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
   });
 
   // --- POS (src/hooks/usePos.ts) ---
-  const pos = usePos({ posProducts: initialPosProducts, createOrderFromSale });
+  const pos = usePos({
+    isActive: activeTab === "pos",
+    onStockUpdated: inventory.refreshMenuInventory,
+  });
   const {
     posCategory,
     setPosCategory,
     filteredPosProducts,
+    isCatalogLoading,
+    catalogError,
+    retryCatalogLoad,
     addToCart,
     cart,
     adjustCartQty,
@@ -193,12 +198,19 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
     completeSale,
     sales,
     receipt,
-    setReceipt,
+  receiptLoading,
+  receiptError,
+  openReceipt,
+  closeReceipt,
     cartWidth,
     isResizing,
     startResizing,
     todayISO,
     isConfirmOrderDisabled,
+    isSubmitting: isPosSubmitting,
+    checkoutError,
+    salesLoading,
+    salesError,
   } = pos;
 
   // --- DERIVED CROSS-FEATURE VALUES (dashboard) ---
@@ -217,6 +229,7 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
     clearViewingClient();
     setViewingRecipe(null);
     setIsCreatingRecipe(false);
+    setProductionPrefillRecipeId(null);
     setIsMobileOpen(false);
     setIsTabletSidebarOpen(false);
   };
@@ -229,6 +242,14 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
   const goToProductionRuns = () => {
     setActiveTab("production-runs");
     clearViewingOrder();
+  };
+
+  const goToProductionRunsForRecipe = (recipe: { id: string }) => {
+    setActiveTab("production-runs");
+    clearViewingOrder();
+    setViewingRecipe(null);
+    setIsCreatingRecipe(false);
+    setProductionPrefillRecipeId(recipe.id);
   };
 
   return (
@@ -269,13 +290,20 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
           onFieldChange={updateConfirmField}
           onClose={closeConfirmModal}
           onConfirm={completeSale}
-          disabled={isConfirmOrderDisabled}
+          disabled={isConfirmOrderDisabled || isPosSubmitting}
+          isSubmitting={isPosSubmitting}
+          error={checkoutError}
         />
       )}
 
       {/* RECEIPT MODAL (extracted to src/components/pos/ReceiptModal.tsx) */}
-      {receipt && (
-        <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />
+    {(receipt || receiptLoading || receiptError) && (
+      <ReceiptModal
+        receipt={receipt}
+        isLoading={receiptLoading}
+        error={receiptError}
+        onClose={closeReceipt}
+      />
       )}
 
       {/* MOBILE TOP BAR (extracted to src/components/layout/MobileTopBar.tsx) */}
@@ -334,6 +362,9 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
             posCategory={posCategory}
             setPosCategory={setPosCategory}
             filteredPosProducts={filteredPosProducts}
+            isCatalogLoading={isCatalogLoading}
+            catalogError={catalogError}
+            onRetryCatalogLoad={retryCatalogLoad}
             addToCart={addToCart}
             cart={cart}
             adjustCartQty={adjustCartQty}
@@ -430,6 +461,7 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
             onEditRule={updatePricingRule}
             onCancelEdit={cancelRecipeEdit}
             onSave={saveRecipe}
+            onScheduleProduction={goToProductionRunsForRecipe}
           />
         )}
 
@@ -442,6 +474,8 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
             recipes={recipes}
             menuInventory={menuInventory}
             ingredients={ingredients}
+            prefillRecipeId={productionPrefillRecipeId}
+            onPrefillConsumed={() => setProductionPrefillRecipeId(null)}
             onSchedule={scheduleProductionRun}
             onComplete={completeProductionRun}
             onDelete={deleteProductionRun}
@@ -464,7 +498,9 @@ function AppShell({ currentUser, onLogout: logout }: { currentUser: User; onLogo
           <ReportsView
             activeTab={activeTab}
             sales={sales}
-            onReprintSale={setReceipt}
+            salesLoading={salesLoading}
+            salesError={salesError}
+            onReprintSale={openReceipt}
             expenses={expenses}
             dayClosings={dayClosings}
             onAddExpense={addExpense}

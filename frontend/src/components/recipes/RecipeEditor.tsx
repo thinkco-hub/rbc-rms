@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { computeRecipeCost, suggestedPrice } from "../../utils/pricing";
+import NumericField from "../common/NumericField";
 import type { FormEvent } from "react";
 import type {
   IngredientStock,
@@ -22,7 +23,7 @@ interface RecipeEditorProps {
   ingredients: IngredientStock[];
   pricingRules: PricingRules;
   onCancel: () => void;
-  onSave: (recipe: RecipeInput) => void;
+  onSave: (recipe: RecipeInput) => Promise<void>;
 }
 
 /** Editor form state: numeric fields are raw strings while typing. */
@@ -98,7 +99,10 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
   } as Recipe;
   const { totalCost, costPerUnit } = computeRecipeCost(normalizedForCalc, ingredients);
 
-  const handleSubmit = (e: FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.category || form.price === "" || form.qty === "" || form.target === "" || !form.shelfLife) {
       return;
@@ -110,19 +114,27 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
     if (hasBom && (!form.yieldQty || !form.yieldUnit)) return;
     const hasYield = form.yieldQty !== "" && !!form.yieldUnit;
 
-    onSave({
-      id: form.id,
-      name: form.name,
-      type: "Menu Item",
-      category: form.category,
-      price: parseFloat(String(form.price)) || 0,
-      qty: parseFloat(String(form.qty)) || 0,
-      target: parseFloat(String(form.target)) || 0,
-      shelfLife: form.shelfLife,
-      yieldQty: hasYield ? parseFloat(String(form.yieldQty)) || 0 : undefined,
-      yieldUnit: hasYield ? form.yieldUnit : undefined,
-      ingredients: cleanIngredients,
-    });
+    setError(null);
+    setSubmitting(true);
+    try {
+      await onSave({
+        id: form.id,
+        name: form.name,
+        type: "Menu Item",
+        category: form.category,
+        price: parseFloat(String(form.price)) || 0,
+        qty: parseFloat(String(form.qty)) || 0,
+        target: parseFloat(String(form.target)) || 0,
+        shelfLife: form.shelfLife,
+        yieldQty: hasYield ? parseFloat(String(form.yieldQty)) || 0 : undefined,
+        yieldUnit: hasYield ? form.yieldUnit : undefined,
+        ingredients: cleanIngredients,
+      });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save recipe.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -166,38 +178,26 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Price (₱)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={form.price}
-                    onChange={(e) => updateField("price", e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                  <NumericField
+                    label="Price (₱)"
+                    value={String(form.price)}
+                    onChange={(v) => updateField("price", v)}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Initial Qty on Hand</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={form.qty}
-                    onChange={(e) => updateField("qty", e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                  <NumericField
+                    label="Initial Qty on Hand"
+                    value={String(form.qty)}
+                    onChange={(v) => updateField("qty", v)}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Target Stock</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={form.target}
-                    onChange={(e) => updateField("target", e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                  <NumericField
+                    label="Target Stock"
+                    value={String(form.target)}
+                    onChange={(v) => updateField("target", v)}
                     required
                   />
                 </div>
@@ -217,13 +217,9 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Yield Qty <span className="text-gray-400 font-normal">(if made in batches)</span>
                     </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={form.yieldQty}
-                      onChange={(e) => updateField("yieldQty", e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                    <NumericField
+                      value={String(form.yieldQty)}
+                      onChange={(v) => updateField("yieldQty", v)}
                     />
                   </div>
                   <div>
@@ -276,14 +272,11 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
                           </option>
                         ))}
                       </select>
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
+                      <NumericField
                         placeholder="Qty"
-                        value={line.qty}
-                        onChange={(e) => updateLine(idx, "qty", e.target.value)}
-                        className="w-full sm:w-28 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                        value={String(line.qty)}
+                        onChange={(v) => updateLine(idx, "qty", v)}
+                        className="w-full sm:w-28"
                       />
                       <span className="w-16 text-sm text-gray-500 font-medium">
                         {ingredient?.unit || line.unit || ""}
@@ -341,13 +334,10 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
                             {TIER_LABELS[idx]}
                           </p>
                           <div className="flex items-center gap-1 mt-1">
-                            <input
-                              type="number"
-                              min="0"
-                              max="95"
-                              value={margin}
-                              onChange={(e) => updateMarginTier(idx, e.target.value)}
-                              className="w-14 px-1.5 py-1 border border-gray-300 rounded text-xs font-bold text-gray-800 text-right focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none"
+                            <NumericField
+                              value={String(margin)}
+                              onChange={(v) => updateMarginTier(idx, v)}
+                              className="w-14 px-1.5 py-1 text-xs text-right"
                             />
                             <span className="text-xs text-gray-500 font-medium">% margin</span>
                           </div>
@@ -360,6 +350,9 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
               </div>
             </div>
 
+            {error && (
+              <p className="text-sm font-semibold text-red-600">{error}</p>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
@@ -370,9 +363,10 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
               </button>
               <button
                 type="submit"
-                className="flex-1 py-3 rounded-xl text-white font-bold bg-[#562D07] hover:bg-[#3a1d04] transition-colors"
+                disabled={submitting}
+                className="flex-1 py-3 rounded-xl text-white font-bold bg-[#562D07] hover:bg-[#3a1d04] transition-colors disabled:opacity-60"
               >
-                Save Recipe
+                {submitting ? "Saving..." : "Save Recipe"}
               </button>
             </div>
           </div>

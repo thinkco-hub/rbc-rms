@@ -7,6 +7,14 @@ INVENTORY_VIEW = "inventory.view"
 INVENTORY_MANAGE = "inventory.manage"
 RECIPES_VIEW = "recipes.view"
 RECIPES_MANAGE = "recipes.manage"
+PRODUCTION_VIEW = "production.view"
+PRODUCTION_MANAGE = "production.manage"
+ORDERS_VIEW = "orders.view"
+ORDERS_MANAGE = "orders.manage"
+POS_VIEW = "pos.view"
+POS_MANAGE = "pos.manage"
+REPORTS_VIEW = "reports.view"
+REPORTS_MANAGE = "reports.manage"
 
 
 def _employee_permission_codes(user):
@@ -74,6 +82,26 @@ class RecipesPermission(HasPermissionCode):
     manage_permission = RECIPES_MANAGE
 
 
+class ProductionPermission(HasPermissionCode):
+    view_permission = PRODUCTION_VIEW
+    manage_permission = PRODUCTION_MANAGE
+
+
+class PosPermission(HasPermissionCode):
+    view_permission = POS_VIEW
+    manage_permission = POS_MANAGE
+
+
 class AccountsPermission(HasPermissionCode):
     view_permission = ACCOUNTS_MANAGE
     manage_permission = ACCOUNTS_MANAGE
+
+
+class OrdersPermission(HasPermissionCode):
+    view_permission = ORDERS_VIEW
+    manage_permission = ORDERS_MANAGE
+
+
+class ReportsPermission(HasPermissionCode):
+    view_permission = REPORTS_VIEW
+    manage_permission = REPORTS_MANAGE

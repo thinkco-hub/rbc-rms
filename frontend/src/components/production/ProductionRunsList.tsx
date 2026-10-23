@@ -30,6 +30,8 @@ interface ProductionRunsListProps {
   recipes: Recipe[];
   menuInventory: MenuItemStock[];
   ingredients: IngredientStock[];
+  prefillRecipeId?: string | null;
+  onPrefillConsumed?: () => void;
   onSchedule: (data: ScheduleRunData) => void;
   onComplete: (id: ProductionRunId) => void;
   onDelete: (id: ProductionRunId) => void;
@@ -40,6 +42,8 @@ export default function ProductionRunsList({
   recipes,
   menuInventory,
   ingredients,
+  prefillRecipeId,
+  onPrefillConsumed,
   onSchedule,
   onComplete,
   onDelete,
@@ -47,6 +51,17 @@ export default function ProductionRunsList({
   const [statusFilter, setStatusFilter] = useState<"all" | ProductionRunDisposition>("all");
   const [isScheduling, setIsScheduling] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<ProductionRunId | null>(null);
+
+  React.useEffect(() => {
+    if (prefillRecipeId) {
+      setIsScheduling(true);
+    }
+  }, [prefillRecipeId]);
+
+  const closeScheduling = () => {
+    setIsScheduling(false);
+    onPrefillConsumed?.();
+  };
 
   const withStatus = productionRuns.map((run) => {
     const recipe = recipes.find((r) => r.id === run.recipeId) || null;
@@ -88,7 +103,7 @@ export default function ProductionRunsList({
 
   const handleSchedule = (data: ScheduleRunData) => {
     onSchedule(data);
-    setIsScheduling(false);
+    closeScheduling();
   };
 
   const handleComplete = (id: ProductionRunId) => {
@@ -105,7 +120,12 @@ export default function ProductionRunsList({
   return (
     <div className="max-w-6xl mx-auto animate-fadeIn pb-10 w-full">
       {isScheduling && (
-        <ScheduleRunModal recipes={recipes} onClose={() => setIsScheduling(false)} onSchedule={handleSchedule} />
+        <ScheduleRunModal
+          recipes={recipes}
+          initialRecipeId={prefillRecipeId || undefined}
+          onClose={closeScheduling}
+          onSchedule={handleSchedule}
+        />
       )}
       {selectedModalEntry && (
         <RunDetailModal

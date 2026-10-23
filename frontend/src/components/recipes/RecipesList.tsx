@@ -1,4 +1,5 @@
 import React from "react";
+import NumericField from "../common/NumericField";
 import { computeRecipeCost, suggestedPrice } from "../../utils/pricing";
 import type {
   IngredientStock,
@@ -16,6 +17,7 @@ interface RecipesListProps {
   onEditRule: (data: PricingRuleInput) => void;
   onEdit: (recipe: Recipe) => void;
   onCreate: () => void;
+  onScheduleProduction: (recipe: Recipe) => void;
 }
 
 export default function RecipesList({
@@ -26,6 +28,7 @@ export default function RecipesList({
   onEditRule,
   onEdit,
   onCreate,
+  onScheduleProduction,
 }: RecipesListProps) {
   return (
     <div className="max-w-6xl mx-auto animate-fadeIn pb-10 w-full">
@@ -50,13 +53,10 @@ export default function RecipesList({
           <p className="text-sm text-gray-500">Target margin used to compute suggested prices.</p>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min="0"
-            max="95"
-            value={pricingRules.targetMarginPercent}
-            onChange={(e) => onEditRule({ targetMarginPercent: e.target.value })}
-            className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800 text-right font-bold"
+          <NumericField
+            value={String(pricingRules.targetMarginPercent)}
+            onChange={(v) => onEditRule({ targetMarginPercent: v })}
+            className="w-24 py-2 text-right font-bold"
           />
           <span className="text-gray-500 font-medium">% target margin</span>
         </div>
@@ -118,12 +118,18 @@ export default function RecipesList({
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-center">
+                      <td className="px-4 py-4 text-center whitespace-nowrap">
                         <button
                           onClick={() => onEdit(recipe)}
                           className="text-gray-500 hover:text-[#F17D0C] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => onScheduleProduction(recipe)}
+                          className="text-gray-500 hover:text-[#F17D0C] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
+                        >
+                          Schedule Run
                         </button>
                       </td>
                     </tr>
