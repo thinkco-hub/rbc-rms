@@ -8,4 +8,5 @@ urlpatterns = [
     path("orders/", include("apps.orders.urls")),
     path("pos/", include("apps.pos.urls")),
     path("reports/", include("apps.reports.urls")),
+    path("calendar/", include("apps.calendar_sync.urls")),
 ]
