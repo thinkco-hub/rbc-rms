@@ -67,6 +67,19 @@ SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 
 
+# Google Calendar sync (FR-3.6). Leave the client id/secret blank to disable.
+# The redirect URI must exactly match one registered on the OAuth client in
+# Google Cloud Console, and points at this backend's callback endpoint.
+GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
+GOOGLE_OAUTH_CLIENT_SECRET = env("GOOGLE_OAUTH_CLIENT_SECRET", default="")
+GOOGLE_OAUTH_REDIRECT_URI = env(
+    "GOOGLE_OAUTH_REDIRECT_URI",
+    default="http://localhost:8000/api/v1/calendar/oauth/callback/",
+)
+GOOGLE_CALENDAR_ID = env("GOOGLE_CALENDAR_ID", default="primary")
+# Where the OAuth callback sends the browser back to when it's done.
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
+
 # Application definition
 
 INSTALLED_APPS = [
