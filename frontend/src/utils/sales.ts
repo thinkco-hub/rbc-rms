@@ -11,9 +11,10 @@ import type {
   Sale,
   SalesSummary,
 } from "../types/domain";
+import { addDaysISO, formatDateTime, toISODate } from "./dates";
 
 export function saleDateKey(sale: Sale): ISODate {
-  return sale.createdAt?.slice(0, 10) || "";
+  return toISODate(new Date(sale.createdAt));
 }
 
 export function filterSalesByRange(
@@ -24,7 +25,6 @@ export function filterSalesByRange(
   if (!startDate && !endDate) return sales;
   return sales.filter((sale) => {
     const key = saleDateKey(sale);
-    if (!key) return false;
     if (startDate && key < startDate) return false;
     if (endDate && key > endDate) return false;
     return true;
@@ -42,21 +42,18 @@ export function getPresetRange(
   preset: DatePresetId,
   today: Date = new Date()
 ): DateFilterRange {
-  const end = today.toISOString().slice(0, 10);
+  const end = toISODate(today);
   if (preset === "all") return { start: "", end: "" };
   if (preset === "today") return { start: end, end };
 
-  const start = new Date(today);
-  if (preset === "week") start.setDate(start.getDate() - 6);
-  else if (preset === "month") start.setDate(start.getDate() - 29);
-  else return { start: "", end: "" };
-
-  return { start: start.toISOString().slice(0, 10), end };
+  if (preset === "week") return { start: addDaysISO(end, -6), end };
+  if (preset === "month") return { start: addDaysISO(end, -29), end };
+  return { start: "", end: "" };
 }
 
 export function computeSalesSummary(sales: Sale[]): SalesSummary {
   const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0);
-  const totalTax = sales.reduce((sum, s) => sum + (s.tax ?? 0), 0);
+  const totalTax = sales.reduce((sum, s) => sum + s.tax, 0);
   const totalTransactions = sales.length;
   const avgTicket = totalTransactions ? totalRevenue / totalTransactions : 0;
   return { totalRevenue, totalTax, totalTransactions, avgTicket };
@@ -96,7 +93,6 @@ export function getRevenueByDay(sales: Sale[]): RevenueByDay[] {
   const map = new Map<ISODate, number>();
   sales.forEach((sale) => {
     const key = saleDateKey(sale);
-    if (!key) return;
     map.set(key, (map.get(key) || 0) + sale.total);
   });
   return Array.from(map.entries())
@@ -112,9 +108,21 @@ export function getRevenueByPaymentMethod(sales: Sale[]): RevenueByPaymentMethod
   return Array.from(map.entries()).map(([method, revenue]) => ({ method, revenue }));
 }
 
-function csvEscape(value: unknown): string {
+/**
+ * One cell of a downloaded CSV, escaped for both writers.
+ *
+ * A downloaded file is forwarded and reopened in whatever the recipient has, and
+ * a cell that begins with = + - @ — or with that after a leading tab or space —
+ * is offered to the spreadsheet engine as a formula. The apostrophe makes the
+ * reader treat it as text. Cells that are simply a number keep their spelling:
+ * prefixing `-12` would turn a negative quantity into text and drop it out of
+ * every total the recipient draws over that column.
+ */
+export function csvEscape(value: unknown): string {
   const str = String(value ?? "");
-  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+  const isFormulaShape = /^[ \t]*[=+\-@]/.test(str) && !/^[+-]?\d+(?:\.\d+)?$/.test(str);
+  const guarded = isFormulaShape ? `'${str}` : str;
+  return /[",\n]/.test(guarded) ? `"${guarded.replace(/"/g, '""')}"` : guarded;
 }
 
 export function salesToCSV(sales: Sale[]): string {
@@ -131,13 +139,13 @@ export function salesToCSV(sales: Sale[]): string {
   ];
   const rows = sales.map((sale): unknown[] => [
     sale.id,
-    sale.createdAt ? new Date(sale.createdAt).toLocaleString() : "Date unavailable",
+    formatDateTime(sale.createdAt),
     sale.type,
     sale.customerName,
     sale.paymentMethod,
     sale.items.map((i) => `${i.qty}x ${i.name}`).join("; "),
     sale.subtotal.toFixed(2),
-    sale.tax === null ? "Unavailable" : sale.tax.toFixed(2),
+    sale.tax.toFixed(2),
     sale.total.toFixed(2),
   ]);
   return [header, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");

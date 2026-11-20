@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import ClientFormModal from "./ClientFormModal";
-import { SearchIcon } from "../icons";
+import SearchField from "../common/SearchField";
 import type { Client, ClientFormData, ClientId, Order } from "../../types/domain";
 
 interface ClientsListProps {
@@ -51,18 +51,12 @@ export default function ClientsList({ clients, orders, onAdd, onUpdate, onView }
       </header>
 
       <div className="bg-white border border-gray-200 rounded-lg p-2 mb-4 shadow-sm flex">
-        <div className="relative flex-1 w-full">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <SearchIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border-none focus:ring-0 text-sm text-gray-900 placeholder-gray-400 bg-transparent outline-none"
-            placeholder="Search clients..."
-          />
-        </div>
+        <SearchField
+          value={search}
+          onChange={setSearch}
+          ariaLabel="Search clients by name"
+          placeholder="Search clients..."
+        />
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -90,20 +84,22 @@ export default function ClientsList({ clients, orders, onAdd, onUpdate, onView }
                     <td className="px-6 py-4 font-medium text-gray-900">{client.name}</td>
                     <td className="px-6 py-4 text-gray-600">
                       <div>{client.contact || "—"}</div>
-                      {client.email && <div className="text-xs text-gray-400">{client.email}</div>}
+                      {client.email && <div className="text-xs text-gray-500">{client.email}</div>}
                     </td>
                     <td className="px-6 py-4 text-gray-600 max-w-xs truncate">{client.standingOrder || "—"}</td>
                     <td className="px-6 py-4 text-right text-gray-600">{orderCount(client.id)}</td>
                     <td className="px-4 py-4 text-center whitespace-nowrap">
                       <button
                         onClick={() => setModalState({ isOpen: true, editing: client })}
+                        aria-label={`Edit ${client.name}`}
                         className="text-gray-500 hover:bg-gray-100 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => onView(client)}
-                        className="text-[#F17D0C] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
+                        aria-label={`View ${client.name}`}
+                        className="text-[var(--color-brand-text)] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
                       >
                         View
                       </button>

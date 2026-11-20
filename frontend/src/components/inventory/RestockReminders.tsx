@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SelectField from "../common/SelectField";
 import type { FormEvent } from "react";
 import type { IngredientStock, IngredientId, ISODate, RestockReminder, RestockReminderData } from "../../types/domain";
 
@@ -42,36 +43,39 @@ export default function RestockReminders({ ingredients, reminders, onAdd, onTogg
           <h3 className="text-lg font-bold text-[#121212] mb-4">New Reminder</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Ingredient</label>
-              <select
+              <label htmlFor="reminder-ingredient" className="block text-sm font-semibold text-gray-700 mb-1">Ingredient</label>
+              <SelectField
+                id="reminder-ingredient"
                 value={form.ingredientId}
                 onChange={(e) => setForm({ ...form, ingredientId: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               >
                 {ingredients.map((i) => (
                   <option key={i.id} value={i.id}>
                     {i.name}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Due Date</label>
+              <label htmlFor="reminder-due-date" className="block text-sm font-semibold text-gray-700 mb-1">Due Date</label>
               <input
+                id="reminder-due-date"
                 type="date"
                 value={form.dueDate}
                 onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Note</label>
+              <label htmlFor="reminder-note" className="block text-sm font-semibold text-gray-700 mb-1">Note</label>
               <textarea
+                id="reminder-note"
                 value={form.note}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                 placeholder="Optional note..."
               />
             </div>
@@ -88,11 +92,11 @@ export default function RestockReminders({ ingredients, reminders, onAdd, onTogg
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-5 border-b border-gray-100">
               <h3 className="text-lg font-bold text-[#121212]">
-                Pending <span className="text-gray-400 font-medium text-sm">({pending.length})</span>
+                Pending <span className="text-gray-500 font-medium text-sm">({pending.length})</span>
               </h3>
             </div>
             {pending.length === 0 ? (
-              <p className="p-6 text-center text-gray-400 text-sm">No pending reminders.</p>
+              <p className="p-6 text-center text-gray-500 text-sm">No pending reminders.</p>
             ) : (
               <ul className="divide-y divide-gray-100">
                 {pending.map((r) => (
@@ -100,11 +104,12 @@ export default function RestockReminders({ ingredients, reminders, onAdd, onTogg
                     <div>
                       <p className="font-bold text-gray-900 text-sm">{ingredientName(r.ingredientId)}</p>
                       {r.note && <p className="text-sm text-gray-500 mt-0.5">{r.note}</p>}
-                      <p className="text-xs text-gray-400 mt-1">Due {r.dueDate}</p>
+                      <p className="text-xs text-gray-500 mt-1">Due {r.dueDate}</p>
                     </div>
                     <button
                       onClick={() => onToggleDone(r.id)}
-                      className="px-3 py-1.5 rounded-md text-xs font-bold bg-orange-50 text-[#F17D0C] hover:bg-orange-100 transition-colors whitespace-nowrap"
+                      aria-label={`Mark ${ingredientName(r.ingredientId)} reminder as done`}
+                      className="px-3 py-1.5 rounded-md text-xs font-bold bg-orange-50 text-[var(--color-brand-text)] hover:bg-orange-100 transition-colors whitespace-nowrap"
                     >
                       Mark Done
                     </button>
@@ -118,7 +123,7 @@ export default function RestockReminders({ ingredients, reminders, onAdd, onTogg
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="p-5 border-b border-gray-100">
                 <h3 className="text-lg font-bold text-[#121212]">
-                  Completed <span className="text-gray-400 font-medium text-sm">({done.length})</span>
+                  Completed <span className="text-gray-500 font-medium text-sm">({done.length})</span>
                 </h3>
               </div>
               <ul className="divide-y divide-gray-100">
@@ -128,10 +133,11 @@ export default function RestockReminders({ ingredients, reminders, onAdd, onTogg
                       <p className="font-bold text-gray-900 text-sm line-through">
                         {ingredientName(r.ingredientId)}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">Due {r.dueDate}</p>
+                      <p className="text-xs text-gray-500 mt-1">Due {r.dueDate}</p>
                     </div>
                     <button
                       onClick={() => onToggleDone(r.id)}
+                      aria-label={`Reopen ${ingredientName(r.ingredientId)} reminder`}
                       className="px-3 py-1.5 rounded-md text-xs font-bold bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors whitespace-nowrap"
                     >
                       Reopen

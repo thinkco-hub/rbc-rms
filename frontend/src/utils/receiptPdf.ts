@@ -1,12 +1,14 @@
 import { jsPDF } from "jspdf";
+import { formatDateTime } from "./dates";
+import { formatMoneyAscii } from "./money";
 import type { Sale } from "../types/domain";
 
 /**
  * Generates and downloads a receipt as a PDF (80mm-wide thermal-receipt style).
  * Pure client-side via jsPDF — no backend involved.
  *
- * Note: the peso sign (₱) is not in jsPDF's built-in WinAnsi font encoding,
- * so amounts are prefixed with "PhP" instead to avoid rendering as garbage.
+ * Note: the peso sign is not in jsPDF's built-in WinAnsi font encoding, so
+ * amounts use the module's ASCII adapter to avoid rendering as garbage.
  */
 
 const PAGE_W = 80; // mm — standard thermal receipt width
@@ -45,7 +47,7 @@ export function downloadReceiptPdf(sale: Sale): void {
 
   doc.setFontSize(9);
   doc.setFont("courier", "normal");
-  doc.text(sale.type === "Pre-Order" ? "PRE-ORDER RECEIPT" : "SALE RECEIPT", PAGE_W / 2, y, {
+  doc.text(sale.type === "Order" ? "ORDER RECEIPT" : "SALE RECEIPT", PAGE_W / 2, y, {
     align: "center",
   });
   y += LINE_H;
@@ -57,15 +59,15 @@ export function downloadReceiptPdf(sale: Sale): void {
   kv("Customer", sale.customerName || "-");
   if (sale.customerContact) kv("Contact", sale.customerContact);
   kv("Payment", sale.paymentMethod);
-  if (sale.type === "Pre-Order" && sale.deliveryDate) kv("Delivery", sale.deliveryDate);
-  kv("Date", sale.createdAt ? new Date(sale.createdAt).toLocaleString() : "Date unavailable");
+  if (sale.type === "Order") kv("Delivery", sale.deliveryDate);
+  kv("Date", formatDateTime(sale.createdAt));
 
   divider();
 
   sale.items.forEach((item) => {
     const nameLines = doc.splitTextToSize(item.name, x1 - x0 - 14);
-    doc.text(`${item.qty} ${item.unit} @ PhP${item.price.toFixed(2)} ${nameLines[0]}`.trim(), x0, y);
-    doc.text(`PhP${item.lineTotal.toFixed(2)}`, x1, y, {
+    doc.text(`${item.qty}x ${nameLines[0]}`, x0, y);
+    doc.text(formatMoneyAscii(item.price * item.qty), x1, y, {
       align: "right",
     });
     y += LINE_H;
@@ -77,15 +79,11 @@ export function downloadReceiptPdf(sale: Sale): void {
 
   divider();
 
-  kv("Subtotal", `PhP${sale.subtotal.toFixed(2)}`);
-  if (sale.discount > 0) kv("Discount", `-PhP${sale.discount.toFixed(2)}`);
-  kv(
-    sale.taxRate === null ? "Tax" : `Tax (${sale.taxRate}%)`,
-    sale.tax === null ? "Unavailable" : `PhP${sale.tax.toFixed(2)}`
-  );
+  kv("Subtotal", formatMoneyAscii(sale.subtotal));
+  kv("Tax (5%)", formatMoneyAscii(sale.tax));
   doc.setFont("courier", "bold");
   doc.setFontSize(11);
-  kv("TOTAL", `PhP${sale.total.toFixed(2)}`);
+  kv("TOTAL", formatMoneyAscii(sale.total));
   doc.setFont("courier", "normal");
   doc.setFontSize(9);
 

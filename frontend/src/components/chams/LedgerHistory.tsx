@@ -1,5 +1,8 @@
 import React, { useState } from "react";
-import { formatMonthLabel, buildLedgerHistoryForBranchProduct } from "../../utils/ledger";
+import SelectField from "../common/SelectField";
+import { formatMonthLabel } from "../../utils/dates";
+import { buildLedgerHistoryForBranchProduct } from "../../utils/ledger";
+import { formatMoney } from "../../utils/money";
 import { discrepancyLabel } from "../../utils/counts";
 import type { ChamsBeginning, ChamsBranch, ChamsCount, ChamsMovement, ChamsProduct, LedgerRow } from "../../types/domain";
 
@@ -17,7 +20,7 @@ function TrendBars({ rows }: { rows: LedgerRow[] }) {
               style={{ height }}
               title={`${r.branchName} — ${r.productName} — ${formatMonthLabel(r.month)}`}
             />
-            <span className="text-[10px] text-gray-400 mt-1 whitespace-nowrap">
+            <span className="text-[10px] text-gray-500 mt-1 whitespace-nowrap">
               {formatMonthLabel(r.month).split(" ")[0].slice(0, 3)}
             </span>
           </div>
@@ -53,28 +56,30 @@ export default function LedgerHistory({ branches, products, beginnings, movement
           </p>
         </div>
         <div className="flex gap-2">
-          <select
+          <SelectField
             value={branchId}
             onChange={(e) => setBranchId(e.target.value)}
-            className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800 bg-white shadow-sm"
+            aria-label="Branch"
+            className="pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800 bg-white shadow-sm"
           >
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
               </option>
             ))}
-          </select>
-          <select
+          </SelectField>
+          <SelectField
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
-            className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800 bg-white shadow-sm"
+            aria-label="Siopao type"
+            className="pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800 bg-white shadow-sm"
           >
             {products.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
             ))}
-          </select>
+          </SelectField>
         </div>
       </header>
 
@@ -93,7 +98,7 @@ export default function LedgerHistory({ branches, products, beginnings, movement
                 <th className="px-5 py-4 text-right">Restocked</th>
                 <th className="px-5 py-4 text-right">Spoilage</th>
                 <th className="px-5 py-4 text-right">Sold</th>
-                <th className="px-5 py-4 text-right">Profit</th>
+                <th className="px-5 py-4 text-right">Revenue</th>
                 <th className="px-5 py-4 text-right">Remaining (Calc.)</th>
                 <th className="px-5 py-4 text-right">Remaining (Reported)</th>
                 <th className="px-5 py-4">Discrepancy</th>
@@ -107,22 +112,22 @@ export default function LedgerHistory({ branches, products, beginnings, movement
                   <td className="px-5 py-4 text-right text-gray-600">{r.restocked}</td>
                   <td className="px-5 py-4 text-right text-gray-600">{r.spoilage}</td>
                   <td className="px-5 py-4 text-right text-gray-600">{r.sold}</td>
-                  <td className="px-5 py-4 text-right text-green-700 font-medium">₱{r.profit.toFixed(2)}</td>
+                  <td className="px-5 py-4 text-right text-green-700 font-medium">{formatMoney(r.revenue)}</td>
                   <td className="px-5 py-4 text-right font-semibold text-gray-900">{r.remainingCalculated}</td>
                   <td className="px-5 py-4 text-right text-gray-600">
-                    {r.countSubmitted ? r.remainingReported : <span className="text-gray-300">—</span>}
+                    {r.countSubmitted ? r.remainingReported : <span className="text-gray-500">—</span>}
                   </td>
                   <td className="px-5 py-4">
                     {!r.countSubmitted ? (
-                      <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                      <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
                         Not Submitted
                       </span>
                     ) : r.flagged ? (
-                      <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full">
+                      <span className="text-xs font-bold text-red-700 bg-red-100 px-2 py-1 rounded-full">
                         {discrepancyLabel(r.discrepancy as number)}
                       </span>
                     ) : (
-                      <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                      <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full">
                         Match
                       </span>
                     )}

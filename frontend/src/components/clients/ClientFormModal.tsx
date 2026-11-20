@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import type { FormEvent } from "react";
+import Modal from "../common/Modal";
+import { toContactDigits } from "../../utils/orders";
 import type { Client, ClientFormData } from "../../types/domain";
 
 interface ClientFormModalProps {
@@ -12,6 +14,12 @@ export default function ClientFormModal({ initial, onClose, onSave }: ClientForm
   const [form, setForm] = useState<ClientFormData>(
     initial || { name: "", contact: "", email: "", address: "", standingOrder: "" }
   );
+  const headingId = useId();
+  const nameFieldId = useId();
+  const contactFieldId = useId();
+  const emailFieldId = useId();
+  const addressFieldId = useId();
+  const standingOrderFieldId = useId();
 
   const update = (field: keyof ClientFormData, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -24,65 +32,74 @@ export default function ClientFormModal({ initial, onClose, onSave }: ClientForm
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md animate-fadeIn"
-      >
-        <h2 className="text-2xl font-bold text-[#121212] mb-6">
+    <Modal
+      labelledBy={headingId}
+      onClose={onClose}
+      overlayClassName="z-[100] bg-black/50 backdrop-blur-sm px-4"
+      className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md animate-fadeIn"
+    >
+      <form onSubmit={handleSubmit}>
+        <h2 id={headingId} className="text-2xl font-bold text-[#121212] mb-6">
           {initial ? "Edit Client" : "Add Client"}
         </h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Client / Business Name</label>
+            <label htmlFor={nameFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Client / Business Name</label>
             <input
+              id={nameFieldId}
               type="text"
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               required
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
+              <label htmlFor={contactFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
               <input
-                type="text"
+                id={contactFieldId}
+                type="tel"
+                inputMode="numeric"
+                placeholder="09XXXXXXXXX"
                 value={form.contact}
-                onChange={(e) => update("contact", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                onChange={(e) => update("contact", toContactDigits(e.target.value))}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+              <label htmlFor={emailFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
               <input
+                id={emailFieldId}
                 type="email"
                 value={form.email}
                 onChange={(e) => update("email", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Address</label>
+            <label htmlFor={addressFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Address</label>
             <input
+              id={addressFieldId}
               type="text"
               value={form.address}
               onChange={(e) => update("address", e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label htmlFor={standingOrderFieldId} className="block text-sm font-semibold text-gray-700 mb-1">
               Standing Order Preferences
             </label>
             <textarea
+              id={standingOrderFieldId}
               value={form.standingOrder}
               onChange={(e) => update("standingOrder", e.target.value)}
               rows={3}
               placeholder="e.g. 20 Butter Croissants every Monday"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
             />
           </div>
         </div>
@@ -103,6 +120,6 @@ export default function ClientFormModal({ initial, onClose, onSave }: ClientForm
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }

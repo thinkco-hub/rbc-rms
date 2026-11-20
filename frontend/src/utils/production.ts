@@ -51,9 +51,3 @@ export function getRunStatus(
   if (run.status === "completed") return "completed";
   return isRunFeasible(run, recipe, ingredients) ? "scheduled" : "insufficient";
 }
-
-export const RUN_STATUS_LABELS: Record<ProductionRunDisposition, string> = {
-  scheduled: "Scheduled",
-  insufficient: "Insufficient Stock",
-  completed: "Completed",
-};

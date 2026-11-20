@@ -5,11 +5,25 @@ export class ApiError extends Error {
   details: unknown;
 
   constructor(status: number, details: unknown) {
-    super(typeof details === "string" ? details : "API request failed");
+    super(describeDetails(details) || `API request failed (${status})`);
     this.name = "ApiError";
     this.status = status;
     this.details = details;
   }
+}
+
+/** A readable message from a DRF error body ({detail}, field errors, or text). */
+function describeDetails(details: unknown): string {
+  if (typeof details === "string") return details.length < 300 ? details : "";
+  if (!details || typeof details !== "object") return "";
+  const detail = (details as { detail?: unknown }).detail;
+  if (typeof detail === "string") return detail;
+  return Object.entries(details as Record<string, unknown>)
+    .map(([field, value]) => {
+      const text = (Array.isArray(value) ? value : [value]).map(String).join(" ");
+      return field === "non_field_errors" ? text : `${field}: ${text}`;
+    })
+    .join(" ");
 }
 
 function getCookie(name: string): string | null {

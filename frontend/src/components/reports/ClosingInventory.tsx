@@ -3,16 +3,19 @@ import { downloadCSV } from "../../utils/sales";
 import { discrepancyLabel } from "../../utils/counts";
 import {
   todayISO,
+  getDayRange,
   getWeekRange,
   getMonthRange,
+  shiftDayRange,
   shiftWeekRange,
   shiftMonthKey,
   monthKeyOf,
+  formatDayLabel,
   formatWeekLabel,
   formatMonthLabel,
-  computeClosingInventory,
-  closingInventoryToCSV,
-} from "../../utils/closingInventory";
+} from "../../utils/dates";
+import { formatMoney } from "../../utils/money";
+import { computeClosingInventory, closingInventoryToCSV } from "../../utils/closingInventory";
 import type {
   ClosingInventoryRow,
   IngredientStock,
@@ -44,14 +47,14 @@ function StatCard({
     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
       <p className="text-gray-500 text-xs md:text-sm font-medium mb-1">{label}</p>
       <p className={`text-xl md:text-2xl font-bold ${accent || "text-[#121212]"}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
   );
 }
 
 function DiscrepancyBadge({ row }: { row: ClosingInventoryRow }) {
   if (!row.periodCountCount) {
-    return <span className="text-gray-300">—</span>;
+    return <span className="text-gray-500">—</span>;
   }
   const cls =
     row.discrepancyQty === 0
@@ -82,7 +85,12 @@ function ClosingSection({
           {title}
         </h3>
       </div>
-      <div className="overflow-x-auto w-full">
+      <div
+        className="overflow-x-auto w-full"
+        tabIndex={0}
+        role="region"
+        aria-label={`${title} closing inventory`}
+      >
         <table className="w-full text-left border-collapse min-w-[760px]">
           <thead>
             <tr className="border-b border-gray-200 text-xs font-semibold text-gray-700 bg-gray-50/50 uppercase tracking-wider">
@@ -116,14 +124,14 @@ function ClosingSection({
                         Counted {row.lastCountDate}
                       </span>
                     ) : (
-                      <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
                         System
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-3 text-right text-gray-600">₱{row.unitValue.toFixed(2)}</td>
+                  <td className="px-6 py-3 text-right text-gray-600">{formatMoney(row.unitValue)}</td>
                   <td className="px-6 py-3 text-right font-semibold text-gray-900">
-                    ₱{row.closingValue.toFixed(2)}
+                    {formatMoney(row.closingValue)}
                   </td>
                   <td className="px-6 py-3">
                     <DiscrepancyBadge row={row} />
@@ -145,13 +153,19 @@ interface ClosingInventoryProps {
 }
 
 export default function ClosingInventory({ menuInventory, ingredients, inventoryCounts }: ClosingInventoryProps) {
-  const [view, setView] = useState<"week" | "month">("week");
+  const [view, setView] = useState<"day" | "week" | "month">("week");
+  const [dayAnchor, setDayAnchor] = useState<ISODate>(todayISO());
   const [weekAnchor, setWeekAnchor] = useState<ISODate>(todayISO());
   const [monthKey, setMonthKey] = useState(monthKeyOf(todayISO()));
 
   const period = useMemo(
-    () => (view === "week" ? getWeekRange(weekAnchor) : getMonthRange(monthKey)),
-    [view, weekAnchor, monthKey]
+    () =>
+      view === "day"
+        ? getDayRange(dayAnchor)
+        : view === "week"
+        ? getWeekRange(weekAnchor)
+        : getMonthRange(monthKey),
+    [view, dayAnchor, weekAnchor, monthKey]
   );
 
   const result = useMemo(
@@ -159,23 +173,35 @@ export default function ClosingInventory({ menuInventory, ingredients, inventory
     [period, menuInventory, ingredients, inventoryCounts]
   );
 
-  const periodLabel = view === "week" ? formatWeekLabel(period) : formatMonthLabel(monthKey);
+  const periodLabel =
+    view === "day"
+      ? formatDayLabel(dayAnchor)
+      : view === "week"
+      ? formatWeekLabel(period)
+      : formatMonthLabel(monthKey);
   const canGoNext = period.end < todayISO();
 
   const goPrev = () => {
-    if (view === "week") setWeekAnchor(shiftWeekRange(period, -1).start);
+    if (view === "day") setDayAnchor(shiftDayRange(period, -1).start);
+    else if (view === "week") setWeekAnchor(shiftWeekRange(period, -1).start);
     else setMonthKey(shiftMonthKey(monthKey, -1));
   };
 
   const goNext = () => {
     if (!canGoNext) return;
-    if (view === "week") setWeekAnchor(shiftWeekRange(period, 1).start);
+    if (view === "day") setDayAnchor(shiftDayRange(period, 1).start);
+    else if (view === "week") setWeekAnchor(shiftWeekRange(period, 1).start);
     else setMonthKey(shiftMonthKey(monthKey, 1));
   };
 
   const handleExport = () => {
     const csv = closingInventoryToCSV(result);
-    const label = view === "week" ? `${period.start}_to_${period.end}` : monthKey;
+    const label =
+      view === "day"
+        ? period.start
+        : view === "week"
+        ? `${period.start}_to_${period.end}`
+        : monthKey;
     downloadCSV(`closing-inventory-${label}.csv`, csv);
   };
 
@@ -187,13 +213,20 @@ export default function ClosingInventory({ menuInventory, ingredients, inventory
       ? "text-amber-600"
       : "text-red-500";
 
+  // The count-log summary the Reconciliation screen shows (FR-3.4.7), over the
+  // whole log — not scoped to the selected period.
+  const flaggedPending = inventoryCounts.filter(
+    (c) => c.discrepancy !== 0 && c.status === "pending"
+  );
+  const resolved = inventoryCounts.filter((c) => c.status === "resolved");
+
   return (
     <div className="max-w-6xl mx-auto animate-fadeIn pb-10 w-full">
       <header className="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-[#121212]">Closing Inventory</h2>
           <p className="text-gray-500 mt-1">
-            Stock on hand and its value as of the close of a week or month.
+            Stock on hand and its value as of the close of a day, week or month.
           </p>
         </div>
         <button
@@ -215,6 +248,9 @@ export default function ClosingInventory({ menuInventory, ingredients, inventory
 
       {/* View toggle + period navigation */}
       <div className="bg-white border border-gray-200 rounded-lg p-3 mb-6 flex flex-wrap items-center gap-2">
+        <button onClick={() => setView("day")} className={pillCls(view === "day")}>
+          Daily
+        </button>
         <button onClick={() => setView("week")} className={pillCls(view === "week")}>
           Weekly
         </button>
@@ -231,28 +267,52 @@ export default function ClosingInventory({ menuInventory, ingredients, inventory
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
+      <div
+        className={`grid grid-cols-2 gap-3 md:gap-4 mb-6 ${
+          ingredients.length > 0 ? "lg:grid-cols-4" : "lg:grid-cols-3"
+        }`}
+      >
         <StatCard
           label="Total Closing Stock Value"
-          value={`₱${summary.totalValue.toFixed(2)}`}
-          accent="text-[#F17D0C]"
+          value={formatMoney(summary.totalValue)}
+          accent="text-[var(--color-brand-text)]"
         />
         <StatCard
           label="Menu Items Value"
-          value={`₱${summary.menuValue.toFixed(2)}`}
+          value={formatMoney(summary.menuValue)}
           sub={`${menuInventory.length} item(s)`}
         />
-        <StatCard
-          label="Raw Materials Value"
-          value={`₱${summary.ingredientValue.toFixed(2)}`}
-          sub={`${ingredients.length} item(s)`}
-        />
+        {/* A role without the ingredient grant is handed no raw-material rows,
+            so its total value would be a zero-peso figure invented for the layout. */}
+        {ingredients.length > 0 && (
+          <StatCard
+            label="Raw Materials Value"
+            value={formatMoney(summary.ingredientValue)}
+            sub={`${ingredients.length} item(s)`}
+          />
+        )}
         <StatCard
           label="Net Count Discrepancy"
           value={`${summary.netDiscrepancyQty > 0 ? "+" : ""}${summary.netDiscrepancyQty} unit(s)`}
           accent={discrepancyAccent}
-          sub={`≈ ₱${summary.netDiscrepancyValue.toFixed(2)} · ${summary.countedItems} counted / ${summary.systemItems} system`}
+          sub={`≈ ${formatMoney(summary.netDiscrepancyValue)} · ${summary.countedItems} counted / ${summary.systemItems} system`}
         />
+      </div>
+
+      {/* The same count-log summary the Reconciliation screen shows (FR-3.4.7). */}
+      <div className="grid grid-cols-3 gap-3 md:gap-4 mb-6">
+        <div className="bg-white p-4 md:p-5 rounded-2xl border border-red-100 shadow-sm">
+          <p className="text-gray-500 text-xs md:text-sm font-medium mb-0.5">Flagged (Pending)</p>
+          <p className="text-xl md:text-2xl font-bold text-red-600">{flaggedPending.length}</p>
+        </div>
+        <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-100 shadow-sm">
+          <p className="text-gray-500 text-xs md:text-sm font-medium mb-0.5">Total Counts Logged</p>
+          <p className="text-xl md:text-2xl font-bold text-[#121212]">{inventoryCounts.length}</p>
+        </div>
+        <div className="bg-white p-4 md:p-5 rounded-2xl border border-green-100 shadow-sm">
+          <p className="text-gray-500 text-xs md:text-sm font-medium mb-0.5">Resolved</p>
+          <p className="text-xl md:text-2xl font-bold text-green-600">{resolved.length}</p>
+        </div>
       </div>
 
       <ClosingSection
@@ -260,17 +320,20 @@ export default function ClosingInventory({ menuInventory, ingredients, inventory
         rows={result.menuRows}
         emptyText="No menu items to report."
       />
-      <ClosingSection
-        title="Raw Materials"
-        rows={result.ingredientRows}
-        emptyText="No raw materials to report."
-      />
+      {ingredients.length > 0 && (
+        <ClosingSection
+          title="Raw Materials"
+          rows={result.ingredientRows}
+          emptyText="No raw materials to report."
+        />
+      )}
 
-      <p className="text-xs text-gray-400 leading-relaxed mt-2">
+      <p className="text-xs text-gray-500 leading-relaxed mt-2">
         Closing Qty is taken from the latest physical count on or before {period.end} (submitted via
         Inventory → Closing Count). Items without any count fall back to current system stock and are
         marked "System". Menu items are valued at selling price; raw materials at unit cost.
-        Discrepancies reflect counts recorded inside the selected period.
+        Discrepancies reflect counts recorded inside the selected period. The count-log summary above
+        covers every count ever logged, not just the selected period.
       </p>
     </div>
   );

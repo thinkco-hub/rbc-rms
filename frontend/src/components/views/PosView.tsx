@@ -1,180 +1,190 @@
-import React from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import React, { useState } from "react";
+import DeleteConfirmDialog from "../common/DeleteConfirmDialog";
+import { useAnnounce } from "../common/Announcer";
+import PosMobile from "../pos/PosMobile";
+import SelectField from "../common/SelectField";
+import TicketLineItem from "../pos/TicketLineItem";
 import { SearchIcon } from "../icons";
+import { POS_CATEGORIES } from "../../data/initialCatalogue";
+import { formatMoney } from "../../utils/money";
 import type {
   CartItem,
-  ConfirmModalState,
-  ISODate,
   PosCategory,
   PosProduct,
+  TicketCustomer,
 } from "../../types/domain";
 
 interface PosViewProps {
   posCategory: PosCategory;
   setPosCategory: (category: PosCategory) => void;
+  posSearch: string;
+  setPosSearch: (search: string) => void;
   filteredPosProducts: PosProduct[];
-  isCatalogLoading: boolean;
-  catalogError: string | null;
-  onRetryCatalogLoad: () => void;
   addToCart: (product: PosProduct) => void;
   cart: CartItem[];
   adjustCartQty: (id: string, delta: number) => void;
-  setCart: (cart: CartItem[]) => void;
+  isTicketViewOpen: boolean;
+  openTicketView: () => void;
+  closeTicketView: () => void;
+  clearTicket: () => void;
   cartSubtotal: number;
   cartTax: number;
   cartTotal: number;
-  setConfirmModal: (modal: ConfirmModalState) => void;
-  todayISO: ISODate;
-  windowWidth: number;
-  cartWidth: number;
-  startResizing: (e: ReactMouseEvent) => void;
+  customer: TicketCustomer | null;
+  onRemoveCustomer: () => void;
+  onAddCustomer: () => void;
+  openConfirmModal: () => void;
 }
 
+/**
+ * The POS screen. Each breakpoint owns its own tree: a phone gets the product
+ * list with the ticket reached as its own screen (PosMobile), while a tablet or
+ * counter terminal gets products and ticket side by side so the cashier can
+ * ring up and watch the ticket at the same time.
+ */
 export default function PosView({
   posCategory,
   setPosCategory,
+  posSearch,
+  setPosSearch,
   filteredPosProducts,
-  isCatalogLoading,
-  catalogError,
-  onRetryCatalogLoad,
   addToCart,
   cart,
   adjustCartQty,
-  setCart,
+  isTicketViewOpen,
+  openTicketView,
+  closeTicketView,
+  clearTicket,
   cartSubtotal,
   cartTax,
   cartTotal,
-  setConfirmModal,
-  todayISO,
-  windowWidth,
-  cartWidth,
-  startResizing,
+  customer,
+  onRemoveCustomer,
+  onAddCustomer,
+  openConfirmModal,
 }: PosViewProps) {
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const announce = useAnnounce();
+
+  const confirmClear = () => {
+    clearTicket();
+    setIsClearConfirmOpen(false);
+    announce("Ticket cleared.");
+  };
+
   return (
-    <div className="flex flex-col-reverse md:flex-row h-full w-full animate-fadeIn">
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="bg-white shadow-sm border-b border-gray-200 z-10 flex-shrink-0">
-          <div className="p-4 flex items-center gap-4 overflow-x-auto hide-scrollbar">
-            {(["All", "Pastries", "Bread", "Cakes", "Drinks"] as const satisfies readonly PosCategory[]).map(
-              (cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setPosCategory(cat)}
-                  className={`px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${
-                    posCategory === cat
-                      ? "bg-[#562D07] text-white shadow-md"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {cat}
-                </button>
-              )
-            )}
-            <div className="ml-auto flex-shrink-0 hidden md:block relative">
-              <input
-                type="text"
-                placeholder="Search items..."
-                className="pl-10 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm focus:ring-2 focus:ring-[#F17D0C] outline-none"
-              />
-              <SearchIcon className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+    <>
+      <PosMobile
+        posCategory={posCategory}
+        setPosCategory={setPosCategory}
+        posSearch={posSearch}
+        setPosSearch={setPosSearch}
+        filteredPosProducts={filteredPosProducts}
+        addToCart={addToCart}
+        cart={cart}
+        adjustCartQty={adjustCartQty}
+        isTicketViewOpen={isTicketViewOpen}
+        openTicketView={openTicketView}
+        closeTicketView={closeTicketView}
+        cartSubtotal={cartSubtotal}
+        cartTax={cartTax}
+        cartTotal={cartTotal}
+        customer={customer}
+        onRemoveCustomer={onRemoveCustomer}
+        onConfirmOrder={openConfirmModal}
+      />
+
+      <div className="hidden md:flex md:flex-row h-full w-full animate-fadeIn">
+        <div className="flex-1 basis-0 grow-[75] flex flex-col min-h-0 overflow-hidden">
+          <div className="bg-white shadow-sm border-b border-gray-200 z-10 flex-shrink-0">
+            <div className="p-4 flex items-center gap-4">
+              <SelectField
+                value={posCategory}
+                onChange={(e) => setPosCategory(e.target.value as PosCategory)}
+                aria-label="Filter items by category"
+                className="min-h-[2.75rem] w-56 pl-3 bg-gray-100 border border-gray-200 rounded-lg text-sm font-bold text-gray-800 focus:ring-2 focus:ring-[var(--color-brand-text)] outline-none"
+              >
+                {POS_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat === "All" ? "All items" : cat}
+                  </option>
+                ))}
+              </SelectField>
+              <div className="ml-auto flex-shrink-0 relative">
+                <input
+                  type="text"
+                  value={posSearch}
+                  onChange={(e) => setPosSearch(e.target.value)}
+                  placeholder="Search items..."
+                  aria-label="Search POS items"
+                  className="pl-10 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm focus:ring-2 focus:ring-[var(--color-brand-text)] outline-none"
+                />
+                <SearchIcon className="w-5 h-5 text-gray-500 absolute left-3 top-2.5" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex-1 p-4 md:p-6 overflow-y-auto">
-          {isCatalogLoading ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4" role="status" aria-label="Loading POS products">
-              {Array.from({ length: 12 }, (_, index) => (
-                <div key={index} className="aspect-square rounded-xl bg-white border border-gray-200 animate-pulse" />
+          <div className="flex-1 p-6 overflow-y-auto">
+            <div className="grid grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {filteredPosProducts.map((product) => (
+                <button
+                  key={product.id}
+                  onClick={() => addToCart(product)}
+                  className={`relative w-full aspect-square rounded-xl shadow-sm hover:shadow-md transition-all transform active:scale-95 flex flex-col justify-end ${product.color} overflow-hidden group`}
+                >
+                  {/* Any catalogue colour can be the swatch, so the label brings its own plate. */}
+                  <span className="flex flex-col gap-0.5 bg-white px-3 py-2 text-left border-t border-black/10">
+                    <span className="text-base font-bold leading-tight text-[#121212] group-hover:underline">
+                      {product.name}
+                    </span>
+                    <span className="text-sm font-bold text-[var(--color-brand-text)]">
+                      {formatMoney(product.price)}
+                    </span>
+                  </span>
+                </button>
               ))}
             </div>
-          ) : catalogError ? (
-            <div className="max-w-xl mx-auto mt-10 rounded-lg border border-red-200 bg-white p-6 text-center" role="alert">
-              <p className="font-semibold text-red-700">POS products could not be loaded</p>
-              <p className="mt-2 text-sm text-gray-600">{catalogError}</p>
-              <button onClick={onRetryCatalogLoad} className="mt-4 rounded-lg bg-[#562D07] px-4 py-2 text-sm font-bold text-white hover:bg-[#3a1d04]">
-                Retry
-              </button>
-            </div>
-          ) : filteredPosProducts.length === 0 ? (
-            <div className="max-w-xl mx-auto mt-10 rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-500">
-              {posCategory === "All" ? "No menu items are available in Inventory yet." : `No ${posCategory.toLowerCase()} menu items are available.`}
-            </div>
-          ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
-            {filteredPosProducts.map((product) => {
-              const outOfStock = product.availableStock <= 0;
-              return (
-              <button
-                key={product.id}
-                onClick={() => addToCart(product)}
-                disabled={outOfStock}
-                aria-label={`${product.name}, ₱${product.price.toFixed(2)}, ${outOfStock ? "out of stock" : `${product.availableStock} available`}`}
-                className={`relative w-full aspect-square rounded-xl shadow-sm hover:shadow-md transition-all transform active:scale-95 flex flex-col justify-between p-3 ${product.color} text-white overflow-hidden group disabled:cursor-not-allowed disabled:opacity-45`}
-              >
-                <span className="self-end text-sm font-bold opacity-90 drop-shadow-sm">
-                  ₱{product.price.toFixed(2)}
-                </span>
-                <span className="self-start text-left text-sm md:text-base font-bold leading-tight drop-shadow-sm group-hover:underline">
-                  {product.name}
-                </span>
-                <span className="self-start text-xs font-semibold drop-shadow-sm">
-                  {outOfStock ? "Out of stock" : `${product.availableStock} ${product.unit || "available"}`}
-                </span>
-              </button>
-              );
-            })}
           </div>
-          )}
         </div>
-      </div>
 
-      {/* RIGHT: Current Ticket / Cart */}
-      <div
-        className="w-full bg-white border-b md:border-b-0 md:border-l border-gray-200 shadow-md md:shadow-xl flex flex-col max-h-[45vh] md:max-h-none md:h-full flex-shrink-0 z-20 relative"
-        style={{
-          width:
-            windowWidth < 768
-              ? "100%"
-              : windowWidth < 1024
-              ? 260
-              : cartWidth,
-        }}
-      >
-        <div
-          className="hidden md:block absolute left-0 top-0 w-1.5 h-full cursor-col-resize hover:bg-[#F17D0C] active:bg-[#F17D0C] transition-colors z-50"
-          onMouseDown={startResizing}
-          title="Drag to resize cart"
-        />
-
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50 flex-shrink-0">
-          <div className="flex items-center gap-2 text-[#562D07]">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-            <h3 className="font-bold text-lg">Current Ticket</h3>
-          </div>
-          {cart.length > 0 && (
-            <button
-              onClick={() => setCart([])}
-              className="text-gray-400 hover:text-red-500 transition-colors p-1"
-              title="Clear Ticket"
-            >
+        {/* RIGHT: Current Ticket / Cart */}
+        <div className="@container w-full min-w-[240px] basis-0 grow-[25] h-full bg-white border-l border-gray-200 shadow-xl flex flex-col z-20 relative [--tk-title:clamp(1.05rem,4.5cqw,1.45rem)] [--tk-body:clamp(0.95rem,3.6cqw,1.15rem)] [--tk-pad:clamp(0.85rem,4cqw,1.4rem)]">
+          <div className="p-[var(--tk-pad)] border-b border-gray-200 flex justify-between items-center bg-gray-50 flex-shrink-0">
+            <div className="flex items-center gap-2 text-[#562D07] text-[length:var(--tk-title)]">
               <svg
-                className="w-5 h-5"
+                className="w-[1.15em] h-[1.15em] flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+              </svg>
+              <h2 className="font-bold text-[length:var(--tk-title)]">
+                Current Ticket
+              </h2>
+            </div>
+            <button
+              onClick={() => setIsClearConfirmOpen(true)}
+              disabled={cart.length === 0}
+              className={`transition-colors p-[0.5em] min-h-[2.75rem] min-w-[2.75rem] flex items-center justify-center rounded-lg ${
+                cart.length > 0
+                  ? "text-gray-500 hover:text-red-500 hover:bg-red-50"
+                  : "text-gray-300 cursor-not-allowed"
+              }`}
+              title="Clear Ticket"
+              aria-label="Clear Ticket"
+            >
+              <svg
+                className="w-[1.4em] h-[1.4em]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -184,134 +194,135 @@ export default function PosView({
                 />
               </svg>
             </button>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto bg-white min-h-[100px]">
-          {cart.length === 0 ? (
-            <div className="py-6 md:h-full flex flex-col items-center justify-center text-gray-400 text-center">
-              <svg
-                className="w-12 h-12 md:w-16 md:h-16 mb-2 md:mb-4 opacity-20"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
-              </svg>
-              <p className="font-medium text-base md:text-lg text-gray-500">
-                No items added
-              </p>
-              <p className="text-xs md:text-sm mt-1">
-                Tap products to add them to the ticket.
-              </p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {cart.map((item) => (
-                <li key={item.id} className="p-4 hover:bg-gray-50 group">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold text-gray-800 text-[15px]">
-                      {item.name}
-                    </span>
-                    <span className="font-bold text-gray-900">
-                      ₱{(item.price * item.qty).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-gray-500 text-sm">
-                    <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                      <button
-                        onClick={() => adjustCartQty(item.id, -1)}
-                        className="w-8 h-8 flex items-center justify-center bg-gray-50 hover:bg-gray-200 text-gray-600 transition-colors"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          strokeWidth="2.5"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M20 12H4"
-                          />
-                        </svg>
-                      </button>
-                      <span className="w-8 text-center font-bold text-[#121212]">
-                        {item.qty}
-                      </span>
-                      <button
-                        onClick={() => adjustCartQty(item.id, 1)}
-                        disabled={isCatalogLoading || Boolean(catalogError) || item.qty >= item.availableStock}
-                        className="w-8 h-8 flex items-center justify-center bg-gray-50 hover:bg-gray-200 text-gray-600 transition-colors"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          strokeWidth="2.5"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                    <span>
-                      {item.qty} x ₱{item.price.toFixed(2)}
-                    </span>
-                  </div>
-                  {item.qty > item.availableStock && (
-                    <p className="mt-2 text-xs font-medium text-red-600">
-                      Only {item.availableStock} {item.unit} currently available. Reduce the quantity to continue.
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="border-t border-gray-200 bg-gray-50 p-4 flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <div className="space-y-1 md:space-y-2 mb-3 md:mb-4">
-            <div className="flex justify-between text-gray-500 text-sm font-medium">
-              <span>Subtotal</span>
-              <span>₱{cartSubtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-500 text-sm font-medium border-b border-gray-200 pb-2">
-              <span>Tax (5%)</span>
-              <span>₱{cartTax.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-[#121212] text-lg md:text-xl font-bold pt-1">
-              <span>Total</span>
-              <span>₱{cartTotal.toFixed(2)}</span>
-            </div>
           </div>
 
-          <button
-            disabled={cart.length === 0}
-            onClick={() =>
-              setConfirmModal({
-                isOpen: true,
-                paymentMethod: "",
-                customerName: "",
-                customerContact: "",
-                deliveryDate: todayISO,
-                notes: "",
-              })
-            }
-            className={`w-full py-3 md:py-4 rounded-xl text-sm md:text-base font-bold shadow-lg transition-all transform active:scale-[0.98] ${
-              cart.length > 0
-                ? "bg-[#F17D0C] hover:bg-[#d86b06] text-white"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
-            }`}
-          >
-            Order
-          </button>
+          {isClearConfirmOpen && (
+            <DeleteConfirmDialog
+              title="Clear ticket?"
+              message="Removes every item and the customer from the current ticket."
+              confirmLabel="Clear Ticket"
+              onConfirm={confirmClear}
+              onCancel={() => setIsClearConfirmOpen(false)}
+            />
+          )}
+
+          {/* Ticket customer. Its own row rather than a header control: the panel
+              narrows to 240px on a small tablet and the title has to stay legible. */}
+          <div className="flex-shrink-0 border-b border-gray-200 bg-white p-[var(--tk-pad)] text-[length:var(--tk-body)]">
+            {customer ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onAddCustomer}
+                  title={`Change the ticket customer, currently ${customer.name}`}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <p className="text-[0.72em] font-semibold uppercase tracking-wide text-gray-500">
+                    Customer
+                  </p>
+                  <p className="truncate font-bold text-gray-800">{customer.name}</p>
+                </button>
+                <button
+                  onClick={onRemoveCustomer}
+                  aria-label={`Remove ${customer.name} from the ticket`}
+                  className="flex-shrink-0 min-h-[2.75rem] min-w-[2.75rem] flex items-center justify-center rounded-lg text-gray-500 hover:text-red-500 hover:bg-gray-100 transition-colors"
+                >
+                  <svg
+                    className="w-[1.15em] h-[1.15em]"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onAddCustomer}
+                className="w-full min-h-[2.75rem] px-2 rounded-lg border border-dashed border-gray-300 flex items-center justify-center gap-2 font-bold text-[#562D07] hover:bg-gray-50 transition-colors"
+              >
+                <svg
+                  className="w-[1.15em] h-[1.15em] flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <path d="M20 8v6M23 11h-6" />
+                </svg>
+                Add customer
+              </button>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto bg-white min-h-[100px]">
+            {cart.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-gray-500 text-center">
+                <svg
+                  className="w-[clamp(3.5rem,22cqw,5.5rem)] h-[clamp(3.5rem,22cqw,5.5rem)] mb-[clamp(0.6rem,2.5cqw,1.2rem)] opacity-20"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
+                </svg>
+                <p className="font-medium text-[length:var(--tk-title)] text-gray-500">
+                  No items added
+                </p>
+                <p className="text-[length:var(--tk-body)] mt-1">
+                  Tap products to add them to the ticket.
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {cart.map((item) => (
+                  <TicketLineItem
+                    key={item.id}
+                    item={item}
+                    onAdjustQty={adjustCartQty}
+                    className="p-[var(--tk-pad)] text-[length:var(--tk-body)]"
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="border-t border-gray-200 bg-gray-50 p-[var(--tk-pad)] flex-shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <div className="space-y-[0.4em] mb-[var(--tk-pad)]">
+              <div className="flex justify-between text-gray-500 text-[length:var(--tk-body)] font-medium">
+                <span>Subtotal</span>
+                <span>{formatMoney(cartSubtotal)}</span>
+              </div>
+              <div className="flex justify-between text-gray-500 text-[length:var(--tk-body)] font-medium border-b border-gray-200 pb-[0.5em]">
+                <span>Tax (5%)</span>
+                <span>{formatMoney(cartTax)}</span>
+              </div>
+              <div className="flex justify-between text-[#121212] text-[length:var(--tk-title)] font-bold pt-[0.25em]">
+                <span>Total</span>
+                <span>{formatMoney(cartTotal)}</span>
+              </div>
+            </div>
+
+            <button
+              disabled={cart.length === 0}
+              onClick={openConfirmModal}
+              className={`w-full min-h-[3rem] py-[var(--tk-pad)] rounded-xl text-[length:var(--tk-title)] font-bold shadow-lg transition-all transform active:scale-[0.98] ${
+                cart.length > 0
+                  ? "bg-[var(--color-brand-strong)] hover:bg-[var(--color-brand-strong-hover)] text-white"
+                  : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+              }`}
+            >
+              Order
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

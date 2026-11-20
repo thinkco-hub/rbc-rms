@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import NumericField from "../common/NumericField";
-import { formatMonthLabel, monthKey } from "../../utils/ledger";
+import SelectField from "../common/SelectField";
+import { formatMonthLabel, monthKey } from "../../utils/dates";
 import type { FormEvent } from "react";
 import type { ChamsBeginning, ChamsBranch, ChamsProduct, MonthKey } from "../../types/domain";
 
@@ -64,52 +64,64 @@ export default function BeginningInventoryForm({ branches, products, beginnings,
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Branch</label>
-            <select
+            <label htmlFor="beginning-branch" className="block text-sm font-semibold text-gray-700 mb-1.5">Branch</label>
+            <SelectField
+              id="beginning-branch"
               value={branchId}
               onChange={(e) => setBranchId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+              className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
             >
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Siopao Type</label>
-            <select
+            <label htmlFor="beginning-product" className="block text-sm font-semibold text-gray-700 mb-1.5">Siopao Type</label>
+            <SelectField
+              id="beginning-product"
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+              className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
             >
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Month</label>
-            <select
+            <label htmlFor="beginning-month" className="block text-sm font-semibold text-gray-700 mb-1.5">Month</label>
+            <SelectField
+              id="beginning-month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+              className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
             >
               {MONTH_OPTIONS.map((m) => (
                 <option key={m} value={m}>
                   {formatMonthLabel(m)}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
         </div>
 
         <div>
-          <NumericField label="Opening Count" value={openingCount} onChange={setOpeningCount} />
-          <p className="text-xs text-gray-400 mt-1.5">
+          <label htmlFor="beginning-opening" className="block text-sm font-semibold text-gray-700 mb-1.5">Opening Count</label>
+          <input
+            id="beginning-opening"
+            type="number"
+            min="0"
+            step="any"
+            value={openingCount}
+            onChange={(e) => setOpeningCount(e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+          />
+          <p className="text-xs text-gray-500 mt-1.5">
             {hasExisting
               ? "This month already has a confirmed opening count. Editing and saving will overwrite it."
               : "No opening count set for this combo/month yet — defaults to 0. Only set this to onboard a new branch/siopao type or to correct an error."}

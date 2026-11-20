@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import NumericField from "../common/NumericField";
-import { formatMonthLabel, monthKey } from "../../utils/ledger";
+import SelectField from "../common/SelectField";
+import { formatMonthLabel, monthKey } from "../../utils/dates";
 import type { FormEvent } from "react";
 import type { ChamsBranch, ChamsMovement, ChamsProduct, MonthKey } from "../../types/domain";
 
@@ -75,58 +75,91 @@ export default function MovementLogForm({ branches, products, movements, onSubmi
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Branch</label>
-            <select
+            <label htmlFor="movement-branch" className="block text-sm font-semibold text-gray-700 mb-1.5">Branch</label>
+            <SelectField
+              id="movement-branch"
               value={branchId}
               onChange={(e) => setBranchId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+              className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
             >
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Siopao Type</label>
-            <select
+            <label htmlFor="movement-product" className="block text-sm font-semibold text-gray-700 mb-1.5">Siopao Type</label>
+            <SelectField
+              id="movement-product"
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+              className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
             >
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Month</label>
-            <select
+            <label htmlFor="movement-month" className="block text-sm font-semibold text-gray-700 mb-1.5">Month</label>
+            <SelectField
+              id="movement-month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+              className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
             >
               {MONTH_OPTIONS.map((m) => (
                 <option key={m} value={m}>
                   {formatMonthLabel(m)}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div>
-            <NumericField label="Restocked" value={restocked} onChange={setRestocked} placeholder="0" />
+            <label htmlFor="movement-restocked" className="block text-sm font-semibold text-gray-700 mb-1.5">Restocked</label>
+            <input
+              id="movement-restocked"
+              type="number"
+              min="0"
+              step="any"
+              value={restocked}
+              onChange={(e) => setRestocked(e.target.value)}
+              placeholder="0"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+            />
           </div>
           <div>
-            <NumericField label="Spoilage" value={spoilage} onChange={setSpoilage} placeholder="0" />
+            <label htmlFor="movement-spoilage" className="block text-sm font-semibold text-gray-700 mb-1.5">Spoilage</label>
+            <input
+              id="movement-spoilage"
+              type="number"
+              min="0"
+              step="any"
+              value={spoilage}
+              onChange={(e) => setSpoilage(e.target.value)}
+              placeholder="0"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+            />
           </div>
           <div>
-            <NumericField label="Sold" value={sold} onChange={setSold} placeholder="0" />
+            <label htmlFor="movement-sold" className="block text-sm font-semibold text-gray-700 mb-1.5">Sold</label>
+            <input
+              id="movement-sold"
+              type="number"
+              min="0"
+              step="any"
+              value={sold}
+              onChange={(e) => setSold(e.target.value)}
+              placeholder="0"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3B5BA5] focus:border-[#3B5BA5] outline-none text-gray-800"
+            />
           </div>
         </div>
 
