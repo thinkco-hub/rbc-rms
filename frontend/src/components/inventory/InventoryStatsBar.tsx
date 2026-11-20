@@ -1,4 +1,5 @@
 import React from "react";
+import { STOCK_STATUS_LABELS } from "../../utils/status";
 import { getStockStatus } from "../../utils/stock";
 import type { StockItem, StockStatus } from "../../types/domain";
 
@@ -16,12 +17,10 @@ const CARD_STYLES = {
     iconBg: "bg-gray-100 text-gray-500",
   },
   ok: {
-    label: "In Stock",
     icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />,
     iconBg: "bg-green-50 text-green-500",
   },
   low: {
-    label: "Low Stock",
     icon: (
       <path
         strokeLinecap="round"
@@ -30,10 +29,9 @@ const CARD_STYLES = {
         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
       />
     ),
-    iconBg: "bg-[#F17D0C]/10 text-[#F17D0C]",
+    iconBg: "bg-[#F17D0C]/10 text-[var(--color-brand-text)]",
   },
   out: {
-    label: "Out of Stock",
     icon: (
       <path
         strokeLinecap="round"
@@ -62,6 +60,7 @@ export default function InventoryStatsBar({ items, activeFilter, onFilterChange 
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
       {(["all", "ok", "low", "out"] as const).map((key) => {
         const style = CARD_STYLES[key];
+        const label = key === "all" ? CARD_STYLES.all.label : STOCK_STATUS_LABELS[key];
         const isActive = activeFilter === key;
         return (
           <button
@@ -70,7 +69,7 @@ export default function InventoryStatsBar({ items, activeFilter, onFilterChange 
             onClick={() => onFilterChange(key)}
             className={`text-left bg-white p-4 md:p-5 rounded-2xl border shadow-sm transition-all ${
               isActive
-                ? "border-[#F17D0C] ring-2 ring-[#F17D0C]/30"
+                ? "border-[var(--color-brand-text)] ring-2 ring-[var(--color-brand-text)]/30"
                 : "border-gray-100 hover:border-gray-300"
             }`}
           >
@@ -81,7 +80,7 @@ export default function InventoryStatsBar({ items, activeFilter, onFilterChange 
                 </svg>
               </div>
             </div>
-            <p className="text-gray-500 text-xs md:text-sm font-medium mb-0.5">{style.label}</p>
+            <p className="text-gray-500 text-xs md:text-sm font-medium mb-0.5">{label}</p>
             <p className="text-xl md:text-2xl font-bold text-[#121212]">{counts[key]}</p>
           </button>
         );

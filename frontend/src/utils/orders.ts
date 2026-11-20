@@ -61,8 +61,29 @@ export const PAYMENT_METHODS: readonly PaymentMethod[] = [
   "Card",
 ];
 
+/** A customer contact is a full mobile number: digits only, no separators. */
+export const CUSTOMER_CONTACT_DIGITS = 11;
+
+/** Drops everything but digits and caps the value at a complete number. */
+export function toContactDigits(value: string): string {
+  return value.replace(/\D/g, "").slice(0, CUSTOMER_CONTACT_DIGITS);
+}
+
+export function isValidCustomerContact(value: string): boolean {
+  return value.length === CUSTOMER_CONTACT_DIGITS && /^\d+$/.test(value);
+}
+
 export function computeAmountDue(order: Order): number {
   return Math.max(0, computeOrderTotal(order) - (order.amountPaid || 0));
+}
+
+/**
+ * The money a mutation accepts: a positive, finite amount that does not exceed
+ * `max`, the ceiling the caller owns (an order's outstanding balance; an
+ * expense has none). Hooks enforce it; forms only mirror it for the user.
+ */
+export function isPayableAmount(value: number, max = Number.POSITIVE_INFINITY): boolean {
+  return Number.isFinite(value) && value > 0 && value <= max;
 }
 
 export function getPaymentStatus(order: Order): PaymentStatus {

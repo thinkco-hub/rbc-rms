@@ -1,5 +1,6 @@
-import React from "react";
-import NumericField from "../common/NumericField";
+import React, { useId } from "react";
+import Modal from "../common/Modal";
+import SelectField from "../common/SelectField";
 import type { RestockModalState, StockItem } from "../../types/domain";
 
 interface RestockModalProps {
@@ -23,10 +24,16 @@ export default function RestockModal({
   onConfirm,
   disabled,
 }: RestockModalProps) {
+  const headingId = useId();
+  const itemFieldId = useId();
+  const amountFieldId = useId();
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto animate-fadeIn">
-        <h2 className="text-2xl font-bold text-[#121212] mb-1">
+    <Modal
+      labelledBy={headingId}
+      onClose={onClose}
+      className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto overscroll-contain animate-fadeIn"
+    >
+        <h2 id={headingId} className="text-2xl font-bold text-[#121212] mb-1">
           Restock{" "}
           {modal.category === "menu" ? "Menu Item" : "Ingredient"}
         </h2>
@@ -36,11 +43,12 @@ export default function RestockModal({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
+            <label htmlFor={itemFieldId} className="block text-sm font-semibold text-gray-700 mb-1">
               Item to Restock
             </label>
-            <select
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+            <SelectField
+              id={itemFieldId}
+              className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               value={modal.selectedItemId}
               onChange={(e) => onItemChange(e.target.value)}
             >
@@ -49,16 +57,21 @@ export default function RestockModal({
                   {item.name} (Current: {item.qty})
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
 
           <div>
-            <NumericField
-              label="Quantity to Add"
+            <label htmlFor={amountFieldId} className="block text-sm font-semibold text-gray-700 mb-1">
+              Quantity to Add
+            </label>
+            <input
+              id={amountFieldId}
+              type="number"
               min="1"
               placeholder="Enter amount..."
               value={modal.amountToAdd}
-              onChange={onAmountChange}
+              onChange={(e) => onAmountChange(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
             />
           </div>
 
@@ -66,13 +79,13 @@ export default function RestockModal({
           <div className="flex gap-2">
             <button
               onClick={() => onQuickAdd(5)}
-              className="flex-1 py-2 bg-orange-50 text-[#F17D0C] font-bold rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors"
+              className="flex-1 py-2 bg-orange-50 text-[var(--color-brand-text)] font-bold rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors"
             >
               + 5
             </button>
             <button
               onClick={() => onQuickAdd(10)}
-              className="flex-1 py-2 bg-orange-50 text-[#F17D0C] font-bold rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors"
+              className="flex-1 py-2 bg-orange-50 text-[var(--color-brand-text)] font-bold rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors"
             >
               + 10
             </button>
@@ -98,7 +111,6 @@ export default function RestockModal({
             Confirm Restock
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

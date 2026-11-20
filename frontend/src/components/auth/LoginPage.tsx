@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { LoginCredentials } from "../../types/domain";
 import type { LoginResult } from "../../hooks/useAuth";
@@ -26,6 +26,7 @@ export default function LoginPage({ onLogin, getLockedUntil }: LoginPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const emailRef = useRef<HTMLInputElement>(null);
 
   // Ticks every second so an in-progress lockout (persisted in localStorage,
   // read live below) keeps counting down correctly even right after a
@@ -47,6 +48,9 @@ export default function LoginPage({ onLogin, getLockedUntil }: LoginPageProps) {
   const lockedUntil = getLockedUntil(email);
   const secondsLeft = lockedUntil ? Math.max(0, Math.ceil((lockedUntil - now) / 1000)) : 0;
   const isLocked = secondsLeft > 0;
+  const errorMessage = isLocked
+    ? `Too many failed attempts. Try again in ${secondsLeft}s.`
+    : error;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -54,6 +58,7 @@ export default function LoginPage({ onLogin, getLockedUntil }: LoginPageProps) {
     const result = await onLogin({ email, password });
     setSubmitting(false);
     setError(result.ok ? null : result.error);
+    if (!result.ok) emailRef.current?.focus();
   };
 
   return (
@@ -67,24 +72,29 @@ export default function LoginPage({ onLogin, getLockedUntil }: LoginPageProps) {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+            <label htmlFor="login-email" className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
             <input
+              id="login-email"
+              ref={emailRef}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800 disabled:bg-gray-100 disabled:text-gray-400"
+              aria-describedby={errorMessage ? "login-error" : undefined}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800 disabled:bg-gray-100 disabled:text-gray-400"
               autoComplete="username"
               disabled={isLocked}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
+            <label htmlFor="login-password" className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800 disabled:bg-gray-100 disabled:text-gray-400"
+              aria-describedby={errorMessage ? "login-error" : undefined}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800 disabled:bg-gray-100 disabled:text-gray-400"
               autoComplete="current-password"
               disabled={isLocked}
               required
@@ -92,9 +102,9 @@ export default function LoginPage({ onLogin, getLockedUntil }: LoginPageProps) {
           </div>
         </div>
 
-        {(isLocked || error) && (
-          <p className="mt-4 text-sm font-semibold text-red-600">
-            {isLocked ? `Too many failed attempts. Try again in ${secondsLeft}s.` : error}
+        {errorMessage && (
+          <p id="login-error" role="alert" className="mt-4 text-sm font-semibold text-red-700">
+            {errorMessage}
           </p>
         )}
 

@@ -1,50 +1,34 @@
-import React from "react";
+import React, { useId } from "react";
+import Modal from "../common/Modal";
+import { formatDateTime } from "../../utils/dates";
+import { formatMoney } from "../../utils/money";
 import type { Sale } from "../../types/domain";
 
 interface ReceiptModalProps {
-  receipt: Sale | null;
-  isLoading: boolean;
-  error: string | null;
+  receipt: Sale;
   onClose: () => void;
 }
 
-export default function ReceiptModal({ receipt, isLoading, error, onClose }: ReceiptModalProps) {
+export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
+  const headingId = useId();
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 print:bg-white print:static"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
+    <Modal
+      labelledBy={headingId}
+      onClose={onClose}
+      overlayClassName="z-[100] bg-black/50 backdrop-blur-sm p-4 print:bg-white print:static"
+      className="print-receipt bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto overscroll-contain animate-fadeIn print:shadow-none print:rounded-none"
     >
-      <div className="print-receipt bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto animate-fadeIn print:shadow-none print:rounded-none">
-        {!receipt && isLoading && (
-          <div role="status" className="py-10 text-center text-sm text-gray-500">
-            Loading transaction receipt...
-          </div>
-        )}
-        {!receipt && !isLoading && error && (
-          <div role="alert" className="py-8 text-center">
-            <p className="font-semibold text-red-700">Receipt unavailable</p>
-            <p className="mt-2 text-sm text-gray-600">{error}</p>
-            <button onClick={onClose} className="mt-5 w-full rounded-lg border border-gray-300 py-3 font-bold text-gray-700 hover:bg-gray-100">
-              Close
-            </button>
-          </div>
-        )}
-        {receipt && <>
         <div className="text-center mb-6">
           <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
             <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-[#121212]">Sale Complete</h2>
-          <p className="text-gray-500 text-sm mt-1">Transaction {receipt.id}</p>
-          {receipt.type === "Pre-Order" && (
-            <p className="text-xs font-semibold text-[#F17D0C] mt-2 bg-orange-50 rounded-full px-3 py-1 inline-block">
-              Future delivery date recorded on this sale
+          <h2 id={headingId} className="text-xl font-bold text-[#121212]">Sale Complete</h2>
+          <p className="text-gray-500 text-sm mt-1">{receipt.id}</p>
+          {receipt.type === "Order" && (
+            <p className="text-xs font-semibold text-[var(--color-brand-text)] mt-2 bg-orange-50 rounded-full px-3 py-1 inline-block">
+              Added to Orders — tracked through production &amp; delivery
             </p>
           )}
         </div>
@@ -64,7 +48,7 @@ export default function ReceiptModal({ receipt, isLoading, error, onClose }: Rec
             <span>Payment Method</span>
             <span className="font-semibold text-gray-800">{receipt.paymentMethod}</span>
           </div>
-          {receipt.deliveryDate && receipt.type === "Pre-Order" && (
+          {receipt.type === "Order" && (
             <div className="flex justify-between">
               <span>Delivery Date</span>
               <span className="font-semibold text-gray-800">{receipt.deliveryDate}</span>
@@ -73,7 +57,7 @@ export default function ReceiptModal({ receipt, isLoading, error, onClose }: Rec
           <div className="flex justify-between">
             <span>Date</span>
             <span className="font-semibold text-gray-800">
-              {receipt.createdAt ? new Date(receipt.createdAt).toLocaleString() : "Date unavailable"}
+              {formatDateTime(receipt.createdAt)}
             </span>
           </div>
         </div>
@@ -82,11 +66,11 @@ export default function ReceiptModal({ receipt, isLoading, error, onClose }: Rec
           {receipt.items.map((item) => (
             <li key={item.id} className="py-2 flex justify-between text-sm">
               <span className="text-gray-700">
-                <span className="text-gray-400 mr-2">{item.qty} {item.unit} × ₱{item.price.toFixed(2)}</span>
+                <span className="text-gray-500 mr-2">{item.qty}x</span>
                 {item.name}
               </span>
               <span className="font-semibold text-gray-900">
-                ₱{item.lineTotal.toFixed(2)}
+                {formatMoney(item.price * item.qty)}
               </span>
             </li>
           ))}
@@ -95,17 +79,11 @@ export default function ReceiptModal({ receipt, isLoading, error, onClose }: Rec
         <div className="space-y-1 mb-6 border-t border-dashed border-gray-300 pt-3">
           <div className="flex justify-between text-gray-500 text-sm">
             <span>Subtotal</span>
-            <span>₱{receipt.subtotal.toFixed(2)}</span>
+            <span>{formatMoney(receipt.subtotal)}</span>
           </div>
-          {receipt.discount > 0 && (
-            <div className="flex justify-between text-gray-500 text-sm">
-              <span>Discount</span>
-              <span>-₱{receipt.discount.toFixed(2)}</span>
-            </div>
-          )}
           <div className="flex justify-between text-gray-500 text-sm">
-            <span>{receipt.taxRate === null ? "Tax" : `Tax (${receipt.taxRate}%)`}</span>
-            <span>{receipt.tax === null ? "Unavailable" : `₱${receipt.tax.toFixed(2)}`}</span>
+            <span>Tax (5%)</span>
+            <span>{formatMoney(receipt.tax)}</span>
           </div>
           <div
             className={`flex justify-between text-lg font-bold text-[#121212] pt-1 ${
@@ -113,7 +91,7 @@ export default function ReceiptModal({ receipt, isLoading, error, onClose }: Rec
             }`}
           >
             <span>Total</span>
-            <span className="text-[#F17D0C]">₱{receipt.total.toFixed(2)}</span>
+            <span className="text-[var(--color-brand-text)]">{formatMoney(receipt.total)}</span>
           </div>
           {receipt.notes && (
             <div className="flex justify-between text-sm pt-1">
@@ -140,13 +118,11 @@ export default function ReceiptModal({ receipt, isLoading, error, onClose }: Rec
               );
               downloadReceiptPdf(receipt);
             }}
-            className="flex-1 py-3 rounded-xl text-white font-bold bg-[#F17D0C] hover:bg-[#d86b06] transition-colors"
+            className="flex-1 py-3 rounded-xl text-white font-bold bg-[var(--color-brand-strong)] hover:bg-[var(--color-brand-strong-hover)] transition-colors"
           >
             Download Receipt
           </button>
         </div>
-        </>}
-      </div>
-    </div>
+    </Modal>
   );
 }

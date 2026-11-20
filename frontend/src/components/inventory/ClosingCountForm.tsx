@@ -1,6 +1,7 @@
 import React, { useState } from "react";
+import { useAnnounce } from "../common/Announcer";
+import { todayISO } from "../../utils/dates";
 import type { FormEvent } from "react";
-import NumericField from "../common/NumericField";
 import type {
   ClosingCountEntry,
   ClosingCountSubmission,
@@ -8,8 +9,6 @@ import type {
   InventoryItemCategory,
   MenuItemStock,
 } from "../../types/domain";
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 type CountMap = Record<string, string>;
 
@@ -46,11 +45,15 @@ function CountSection({
                 <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
                 <td className="px-4 py-3 text-gray-500">{("unit" in item && item.unit) || "pcs"}</td>
                 <td className="px-4 py-3 text-right">
-                  <NumericField
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    aria-label={`${title} count for ${item.name}`}
                     value={counts[item.id] ?? ""}
-                    onChange={(v) => onUpdate(item.id, v)}
+                    onChange={(e) => onUpdate(item.id, e.target.value)}
                     placeholder="Enter count"
-                    className="w-32 py-1.5 text-right"
+                    className="w-32 px-2 py-1.5 border border-gray-300 rounded-md text-right focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                   />
                 </td>
               </tr>
@@ -70,10 +73,11 @@ interface ClosingCountFormProps {
 }
 
 export default function ClosingCountForm({ menuInventory, ingredients, onSubmit, onBack }: ClosingCountFormProps) {
-  const [date, setDate] = useState(today());
+  const [date, setDate] = useState(todayISO());
   const [menuCounts, setMenuCounts] = useState<CountMap>({});
   const [ingredientCounts, setIngredientCounts] = useState<CountMap>({});
   const [submittedMsg, setSubmittedMsg] = useState("");
+  const announce = useAnnounce();
 
   const updateMenuCount = (id: string, value: string) => setMenuCounts((prev) => ({ ...prev, [id]: value }));
   const updateIngredientCount = (id: string, value: string) =>
@@ -106,7 +110,9 @@ export default function ClosingCountForm({ menuInventory, ingredients, onSubmit,
     onSubmit({ date, entries });
     setMenuCounts({});
     setIngredientCounts({});
-    setSubmittedMsg(`Closing count for ${date} submitted for review.`);
+    const message = `Closing count for ${date} submitted for review.`;
+    setSubmittedMsg(message);
+    announce(message);
     setTimeout(() => setSubmittedMsg(""), 4000);
   };
 
@@ -125,7 +131,7 @@ export default function ClosingCountForm({ menuInventory, ingredients, onSubmit,
       <header className="mb-6 md:mb-8">
         <h2 className="text-2xl md:text-3xl font-bold text-[#562D07]">Closing Inventory Count</h2>
         <p className="text-[#562D07]/70 mt-1 font-medium text-sm md:text-base">
-          End-of-day physical count — menu items and raw materials. Enter what you physically counted;
+          End-of-day physical count. Enter what you physically counted;
           system stock is only compared afterward during reconciliation.
         </p>
       </header>
@@ -139,12 +145,13 @@ export default function ClosingCountForm({ menuInventory, ingredients, onSubmit,
       <form onSubmit={handleSubmit}>
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <label className="text-sm font-semibold text-gray-700">Count Date</label>
+            <label htmlFor="closing-count-date" className="text-sm font-semibold text-gray-700">Count Date</label>
             <input
+              id="closing-count-date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               required
             />
           </div>
@@ -157,13 +164,17 @@ export default function ClosingCountForm({ menuInventory, ingredients, onSubmit,
           counts={menuCounts}
           onUpdate={updateMenuCount}
         />
-        <CountSection
-          title="Raw Materials"
-          icon="🛒"
-          items={ingredients}
-          counts={ingredientCounts}
-          onUpdate={updateIngredientCount}
-        />
+        {/* The shell hands roles without the ingredient grant an empty
+            projection, so this section would be a header over no rows. */}
+        {ingredients.length > 0 && (
+          <CountSection
+            title="Raw Materials"
+            icon="🛒"
+            items={ingredients}
+            counts={ingredientCounts}
+            onUpdate={updateIngredientCount}
+          />
+        )}
 
         <button
           type="submit"

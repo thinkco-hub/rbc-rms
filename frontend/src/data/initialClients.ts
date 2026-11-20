@@ -5,7 +5,7 @@ export const initialClients: Client[] = [
   {
     id: "CL-001",
     name: "Cafe Luna",
-    contact: "0917 123 4567",
+    contact: "09171234567",
     email: "orders@cafeluna.ph",
     address: "123 Session Rd, Baguio City",
     standingOrder: "20 Butter Croissants every Monday",
@@ -13,7 +13,7 @@ export const initialClients: Client[] = [
   {
     id: "CL-002",
     name: "Central Cafe",
-    contact: "0918 234 5678",
+    contact: "09182345678",
     email: "hello@centralcafe.ph",
     address: "45 Legarda Rd, Baguio City",
     standingOrder: "",
@@ -21,7 +21,7 @@ export const initialClients: Client[] = [
   {
     id: "CL-003",
     name: "Daily Grind",
-    contact: "0919 345 6789",
+    contact: "09193456789",
     email: "supply@dailygrind.ph",
     address: "8 Harrison Rd, Baguio City",
     standingOrder: "Weekly assorted pastry box, Fridays",

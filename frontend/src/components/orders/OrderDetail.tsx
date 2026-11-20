@@ -1,8 +1,12 @@
-import React, { useState } from "react";
-import NumericField from "../common/NumericField";
+import React, { useId, useState } from "react";
+import Modal from "../common/Modal";
 import OrderStatusBadge from "./OrderStatusBadge";
 import PaymentStatusBadge from "./PaymentStatusBadge";
+import EditOrderModal from "./EditOrderModal";
+import EditHistoryList from "../common/EditHistoryList";
+import SelectField from "../common/SelectField";
 import { CalendarIcon } from "../icons";
+import { MONEY_SYMBOL, formatMoney } from "../../utils/money";
 import {
   computeAmountDue,
   computeOrderTotal,
@@ -15,6 +19,7 @@ import {
 import type { FormEvent } from "react";
 import type {
   Client,
+  EditOrderInput,
   MenuItemStock,
   Order,
   OrderDeliveryInput,
@@ -41,6 +46,9 @@ function ScheduleDeliveryModal({
 }) {
   const [deliveryDate, setDeliveryDate] = useState(order.deliveryDate || "");
   const [assignedTo, setAssignedTo] = useState(order.assignedTo || "");
+  const headingId = useId();
+  const dateFieldId = useId();
+  const staffFieldId = useId();
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -50,31 +58,35 @@ function ScheduleDeliveryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-sm animate-fadeIn"
-      >
-        <h2 className="text-2xl font-bold text-[#121212] mb-6">Schedule Delivery</h2>
+    <Modal
+      labelledBy={headingId}
+      onClose={onClose}
+      overlayClassName="z-[100] bg-black/50 backdrop-blur-sm px-4"
+      className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-sm animate-fadeIn"
+    >
+      <form onSubmit={handleSubmit}>
+        <h2 id={headingId} className="text-2xl font-bold text-[#121212] mb-6">Schedule Delivery</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Delivery Date</label>
+            <label htmlFor={dateFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Delivery Date</label>
             <input
+              id={dateFieldId}
               type="date"
               value={deliveryDate}
               onChange={(e) => setDeliveryDate(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Assigned Staff / Driver</label>
+            <label htmlFor={staffFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Assigned Staff / Driver</label>
             <input
+              id={staffFieldId}
               type="text"
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
               placeholder="e.g. Juan Dela Cruz"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               required
             />
           </div>
@@ -95,7 +107,7 @@ function ScheduleDeliveryModal({
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
 
@@ -111,46 +123,59 @@ function RecordPaymentModal({
   const amountDue = computeAmountDue(order);
   const [method, setMethod] = useState<PaymentMethod>(order.paymentMethod || PAYMENT_METHODS[0]);
   const [amount, setAmount] = useState(amountDue > 0 ? amountDue.toFixed(2) : "");
+  const headingId = useId();
+  const methodFieldId = useId();
+  const amountFieldId = useId();
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const parsed = parseFloat(amount);
-    if (!method || isNaN(parsed) || parsed <= 0) return;
+    // Presentation only, so the form cannot offer a figure the mutation will
+    // refuse; useOrders.recordOrderPayment holds the invariant.
+    if (!method || !Number.isFinite(parsed) || parsed <= 0 || parsed > amountDue) return;
     onRecord({ method, amount: parsed });
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-sm animate-fadeIn"
-      >
-        <h2 className="text-2xl font-bold text-[#121212] mb-6">Record Payment</h2>
+    <Modal
+      labelledBy={headingId}
+      onClose={onClose}
+      overlayClassName="z-[100] bg-black/50 backdrop-blur-sm px-4"
+      className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-sm animate-fadeIn"
+    >
+      <form onSubmit={handleSubmit}>
+        <h2 id={headingId} className="text-2xl font-bold text-[#121212] mb-6">Record Payment</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Payment Method</label>
-            <select
+            <label htmlFor={methodFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Payment Method</label>
+            <SelectField
+              id={methodFieldId}
               value={method}
               onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
             >
               {PAYMENT_METHODS.map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
           <div>
-            <NumericField
-              label="Amount Received"
+            <label htmlFor={amountFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Amount Received</label>
+            <input
+              id={amountFieldId}
+              type="number"
               min="0.01"
+              max={amountDue.toFixed(2)}
+              step="0.01"
               value={amount}
-              onChange={setAmount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               required
             />
-            <p className="text-xs text-gray-400 mt-1">Amount due: ₱{amountDue.toFixed(2)}</p>
+            <p className="text-xs text-gray-500 mt-1">Amount due: {formatMoney(amountDue)}</p>
           </div>
         </div>
         <div className="flex gap-3 mt-8">
@@ -169,7 +194,7 @@ function RecordPaymentModal({
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
 
@@ -182,6 +207,7 @@ interface OrderDetailProps {
   onScheduleDelivery: (id: OrderId, data: OrderDeliveryInput) => void;
   onMarkDelivered: (id: OrderId) => void;
   onRecordPayment: (id: OrderId, data: OrderPaymentInput) => void;
+  onEditOrder: (id: OrderId, input: EditOrderInput) => void;
   onGoToProduction: () => void;
 }
 
@@ -194,10 +220,12 @@ export default function OrderDetail({
   onScheduleDelivery,
   onMarkDelivered,
   onRecordPayment,
+  onEditOrder,
   onGoToProduction,
 }: OrderDetailProps) {
   const [isScheduling, setIsScheduling] = useState(false);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const shortfalls = order.status !== "Delivered" ? getOrderShortfalls(order, menuInventory) : [];
   const total = computeOrderTotal(order);
   const amountDue = computeAmountDue(order);
@@ -225,34 +253,67 @@ export default function OrderDetail({
         />
       )}
 
+      {isEditing && (
+        <EditOrderModal
+          order={order}
+          client={client}
+          menuInventory={menuInventory}
+          onClose={() => setIsEditing(false)}
+          onSave={(input) => {
+            onEditOrder(order.id, input);
+            setIsEditing(false);
+          }}
+        />
+      )}
+
       <div className="flex items-center text-[15px] mb-6 text-gray-500 font-medium tracking-wide">
-        <button onClick={onBack} className="hover:text-[#F17D0C] transition-colors">
+        <button onClick={onBack} className="hover:text-[var(--color-brand-text)] transition-colors">
           Orders
         </button>
-        <span className="mx-2 text-gray-400">&gt;</span>
+        <span className="mx-2 text-gray-500">&gt;</span>
         <span className="text-[#121212] font-bold">Order Details</span>
       </div>
 
-      <div className="flex flex-col gap-2 mb-8">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="w-10 h-10 flex items-center justify-center bg-[#eef0f2] hover:bg-gray-300 rounded-lg transition-colors text-gray-700 flex-shrink-0"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7 7-7M3 12h18" />
-              </svg>
-            </button>
-            <h2 className="text-[32px] font-bold text-[#121212] leading-none">Order {order.id}</h2>
+      <div className="flex flex-col gap-3 mb-8 md:flex-row md:items-start md:justify-between">
+        <div className="flex shrink-0 items-center gap-4">
+          <button
+            onClick={onBack}
+            aria-label="Back to orders"
+            className="w-10 h-10 flex items-center justify-center bg-[#eef0f2] hover:bg-gray-300 rounded-lg transition-colors text-gray-700 flex-shrink-0"
+          >
+            <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7 7-7M3 12h18" />
+            </svg>
+          </button>
+          <div className="flex flex-col gap-2">
+            <h2 className="text-[26px] md:text-[32px] font-bold text-[#121212] leading-none">Order {order.id}</h2>
+            <p className="text-gray-500 text-[15px] font-medium tracking-wide">
+              Requested for {order.requestedDate}
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 md:ml-auto">
+        </div>
+        {/* Pills and actions are separate flex units: one shared wrap container let the
+            buttons reflow onto the pills' row. On phones they stack under the title, sharing
+            its left edge so a wrapped row keeps that edge still. From md they sit opposite the
+            title and run to the right edge, and at xl they merge into the single desktop line. */}
+        <div className="ml-14 flex flex-col items-start gap-3 md:ml-0 md:items-end xl:flex-row xl:flex-wrap xl:items-center">
+          <div className="flex flex-wrap items-center gap-3 md:justify-end">
             <OrderStatusBadge status={order.status} />
             <PaymentStatusBadge status={paymentStatus} />
+          </div>
+          <div className="flex flex-wrap items-center gap-3 md:justify-end">
+            <button
+              onClick={() => setIsEditing(true)}
+              disabled={order.status === "Delivered"}
+              title={order.status === "Delivered" ? "Delivered orders can no longer be edited" : undefined}
+              className="px-4 py-1.5 min-h-[2.75rem] md:min-h-0 rounded-full border border-gray-300 bg-white text-gray-800 text-sm font-semibold shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+            >
+              Edit Details
+            </button>
             {amountDue > 0 && (
               <button
                 onClick={() => setIsRecordingPayment(true)}
-                className="px-4 py-1.5 rounded-full border border-gray-300 bg-white text-gray-800 text-sm font-semibold shadow-sm hover:bg-gray-50 transition-colors"
+                className="px-4 py-1.5 min-h-[2.75rem] md:min-h-0 rounded-full border border-gray-300 bg-white text-gray-800 text-sm font-semibold shadow-sm hover:bg-gray-50 transition-colors"
               >
                 Record Payment
               </button>
@@ -260,7 +321,7 @@ export default function OrderDetail({
             {advanceLabel && (
               <button
                 onClick={() => onAdvanceStatus(order.id, nextStatus(order.status))}
-                className="px-4 py-1.5 rounded-full border border-gray-300 bg-white text-gray-800 text-sm font-semibold shadow-sm hover:bg-gray-50 transition-colors"
+                className="px-4 py-1.5 min-h-[2.75rem] md:min-h-0 rounded-full border border-gray-300 bg-white text-gray-800 text-sm font-semibold shadow-sm hover:bg-gray-50 transition-colors"
               >
                 {advanceLabel}
               </button>
@@ -269,13 +330,13 @@ export default function OrderDetail({
               <>
                 <button
                   onClick={() => setIsScheduling(true)}
-                  className="px-4 py-1.5 rounded-full border border-gray-300 bg-white text-gray-800 text-sm font-semibold shadow-sm hover:bg-gray-50 transition-colors"
+                  className="px-4 py-1.5 min-h-[2.75rem] md:min-h-0 rounded-full border border-gray-300 bg-white text-gray-800 text-sm font-semibold shadow-sm hover:bg-gray-50 transition-colors"
                 >
                   {order.deliveryDate ? "Reschedule Delivery" : "Schedule Delivery"}
                 </button>
                 <button
                   onClick={() => onMarkDelivered(order.id)}
-                  className="px-4 py-1.5 rounded-full bg-[#562D07] hover:bg-[#3a1d04] text-white text-sm font-semibold shadow-sm transition-colors"
+                  className="px-4 py-1.5 min-h-[2.75rem] md:min-h-0 rounded-full bg-[#562D07] hover:bg-[#3a1d04] text-white text-sm font-semibold shadow-sm transition-colors"
                 >
                   Mark Delivered
                 </button>
@@ -283,9 +344,6 @@ export default function OrderDetail({
             )}
           </div>
         </div>
-        <p className="text-gray-500 text-[15px] font-medium tracking-wide md:ml-14">
-          Requested for {order.requestedDate}
-        </p>
       </div>
 
       {shortfalls.length > 0 && (
@@ -293,7 +351,7 @@ export default function OrderDetail({
           <p className="text-sm font-bold text-red-700 mb-2">
             Insufficient finished-goods stock for {shortfalls.length} item(s)
           </p>
-          <ul className="text-sm text-red-600 space-y-1 mb-3">
+          <ul className="text-sm text-red-700 space-y-1 mb-3">
             {shortfalls.map((s) => (
               <li key={s.menuItemId}>
                 {s.name}: need {s.requestedQty}, have {s.available} (short {s.shortfall})
@@ -324,8 +382,10 @@ export default function OrderDetail({
             </div>
             <div>
               <p className="text-base font-bold text-[#121212]">{client ? client.name : order.customerName || "—"}</p>
-              <p className="text-xs text-gray-400 font-medium">
-                {client?.contact || (order.customerName ? "Walk-in / POS customer" : "No contact on file")}
+              <p className="text-xs text-gray-500 font-medium">
+                {client?.contact ||
+                  order.customerContact ||
+                  (order.customerName ? "Walk-in / POS customer" : "No contact on file")}
               </p>
             </div>
           </div>
@@ -339,7 +399,7 @@ export default function OrderDetail({
               </div>
               <div>
                 <p className="text-base font-bold text-[#121212]">{order.deliveryDate || "Not scheduled"}</p>
-                <p className="text-xs text-gray-400 font-medium">{order.assignedTo || "—"}</p>
+                <p className="text-xs text-gray-500 font-medium">{order.assignedTo || "—"}</p>
               </div>
             </div>
           </div>
@@ -349,10 +409,10 @@ export default function OrderDetail({
             <p className="text-xs font-bold text-gray-800 mb-4 tracking-wide">Total Amount</p>
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-full bg-[#ffb74d] text-white flex items-center justify-center mr-4">
-                <span className="text-2xl font-bold font-serif">₱</span>
+                <span className="text-2xl font-bold font-serif">{MONEY_SYMBOL}</span>
               </div>
               <div>
-                <p className="text-base font-bold text-[#121212]">₱{total.toFixed(2)}</p>
+                <p className="text-base font-bold text-[#121212]">{formatMoney(total)}</p>
               </div>
             </div>
           </div>
@@ -382,9 +442,9 @@ export default function OrderDetail({
                       </div>
                     </td>
                     <td className="py-4 text-center text-gray-700">{line.qty}</td>
-                    <td className="py-4 text-right text-gray-700">₱{line.unitPrice.toFixed(2)}</td>
+                    <td className="py-4 text-right text-gray-700">{formatMoney(line.unitPrice)}</td>
                     <td className="py-4 text-right font-semibold text-gray-900">
-                      ₱{(line.qty * line.unitPrice).toFixed(2)}
+                      {formatMoney(line.qty * line.unitPrice)}
                     </td>
                   </tr>
                 ))}
@@ -395,7 +455,7 @@ export default function OrderDetail({
             <div className="w-64 space-y-3 text-sm">
               <div className="flex justify-between font-bold text-base pt-2">
                 <span className="text-gray-800">Total Amount</span>
-                <span className="text-gray-900">₱{total.toFixed(2)}</span>
+                <span className="text-gray-900">{formatMoney(total)}</span>
               </div>
             </div>
           </div>
@@ -437,7 +497,7 @@ export default function OrderDetail({
                   <div className="pt-0.5">
                     <h4 className="font-bold text-sm text-gray-900 leading-none">{status}</h4>
                     {status === "Delivered" && order.deliveredAt && (
-                      <p className="text-[10px] text-gray-400 mt-1.5 leading-none">{order.deliveredAt}</p>
+                      <p className="text-[10px] text-gray-500 mt-1.5 leading-none">{order.deliveredAt}</p>
                     )}
                   </div>
                 </div>
@@ -498,15 +558,32 @@ export default function OrderDetail({
             </div>
             <div className="flex justify-between items-center border-b border-gray-100 pb-3">
               <span className="text-gray-500 font-medium">Amount Paid</span>
-              <span className="text-gray-900 font-medium text-xs text-right">₱{(order.amountPaid || 0).toFixed(2)}</span>
+              <span className="text-gray-900 font-medium text-xs text-right">{formatMoney(order.amountPaid || 0)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-500 font-medium">Amount Due</span>
-              <span className="text-gray-900 font-medium text-xs text-right">₱{amountDue.toFixed(2)}</span>
+              <span className="text-gray-900 font-medium text-xs text-right">{formatMoney(amountDue)}</span>
             </div>
           </div>
         </div>
       </div>
+
+      {order.editHistory && order.editHistory.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mt-6">
+          <div className="flex items-center mb-4">
+            <svg className="w-5 h-5 text-orange-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <h3 className="text-base font-bold text-[#121212]">Edit History</h3>
+          </div>
+          <EditHistoryList entries={order.editHistory} />
+        </div>
+      )}
     </div>
   );
 }

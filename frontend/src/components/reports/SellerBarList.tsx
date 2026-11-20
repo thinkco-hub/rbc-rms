@@ -1,15 +1,16 @@
 import React from "react";
+import { formatMoney } from "../../utils/money";
 import type { ItemSalesLine } from "../../types/domain";
 
 export default function SellerBarList({
   items,
-  barColor = "bg-[#F17D0C]",
+  barColor = "bg-[var(--color-brand)]",
 }: {
   items: ItemSalesLine[];
   barColor?: string;
 }) {
   if (items.length === 0) {
-    return <p className="text-sm text-gray-400 py-6 text-center">No item sales in this range.</p>;
+    return <p className="text-sm text-gray-500 py-6 text-center">No item sales in this range.</p>;
   }
 
   const maxQty = Math.max(...items.map((i) => i.qty), 1);
@@ -23,7 +24,7 @@ export default function SellerBarList({
             <div className="flex justify-between items-baseline mb-1">
               <span className="text-sm font-semibold text-gray-800 truncate pr-2">{item.name}</span>
               <span className="text-xs font-bold text-gray-900 whitespace-nowrap">
-                {item.qty} sold · ₱{item.revenue.toFixed(0)}
+                {item.qty} sold · {formatMoney(item.revenue)}
               </span>
             </div>
             <div className="h-[10px] bg-gray-100 rounded-full overflow-hidden">

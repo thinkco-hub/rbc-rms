@@ -1,12 +1,19 @@
 import React from "react";
+import { Link } from "react-router";
 import OrderStatusBadge from "../orders/OrderStatusBadge";
 import { CalendarIcon } from "../icons";
+import { orderPath } from "../../routes";
+import { addDaysISO, formatDate, toISODate } from "../../utils/dates";
+import { formatMoney } from "../../utils/money";
 import { computeOrderTotal } from "../../utils/orders";
-import type { Client, NavTabId, Order, Quantity } from "../../types/domain";
+import { getRevenueByDay } from "../../utils/sales";
+import type { Client, NavTabId, Order, Quantity, Sale } from "../../types/domain";
 
 interface DashboardViewProps {
   orders: Order[];
   clients: Client[];
+  /** The sale ledger, so Today's Revenue matches the Reports screens. */
+  sales: Sale[];
   /** Merged finished-goods and raw-material stock below target. */
   lowStockAlerts: Array<{
     id: string;
@@ -19,18 +26,30 @@ interface DashboardViewProps {
   pendingOrdersCount: number;
   readyOrdersCount: number;
   onNavClick: (tab: NavTabId) => void;
-  onViewOrder: (order: Order) => void;
 }
 
 export default function DashboardView({
   orders,
   clients,
+  sales,
   lowStockAlerts,
   pendingOrdersCount,
   readyOrdersCount,
   onNavClick,
-  onViewOrder,
 }: DashboardViewProps) {
+  const today = new Date();
+  const todayLabel = formatDate(today);
+  const todayKey = toISODate(today);
+  const yesterdayKey = addDaysISO(todayKey, -1);
+  const revenueByDay = getRevenueByDay(sales);
+  const revenueOn = (date: string) =>
+    revenueByDay.find((entry) => entry.date === date)?.revenue ?? 0;
+  const todayRevenue = revenueOn(todayKey);
+  const yesterdayRevenue = revenueOn(yesterdayKey);
+  // No previous day to compare against means no percentage, not 0%.
+  const revenueChangePercent =
+    yesterdayRevenue > 0 ? ((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100 : null;
+
   return (
     <div className="max-w-6xl mx-auto animate-fadeIn pb-10 w-full">
       <header className="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
@@ -40,9 +59,9 @@ export default function DashboardView({
             Overview of your bakery operations today.
           </p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm flex items-center text-sm font-medium text-gray-600">
-          <CalendarIcon className="w-4 h-4 mr-2 text-[#F17D0C]" />
-          May 20, 2026
+        <div className="self-center md:self-auto bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm flex items-center text-sm font-medium text-gray-600">
+          <CalendarIcon className="w-4 h-4 mr-2 text-[var(--color-brand-text)]" />
+          {todayLabel}
         </div>
       </header>
 
@@ -64,14 +83,26 @@ export default function DashboardView({
                 />
               </svg>
             </div>
-            <span className="text-green-500 text-xs font-bold bg-green-50 px-2 py-1 rounded-full">
-              +12.5%
-            </span>
+            {revenueChangePercent !== null && (
+              <span
+                title="Versus yesterday"
+                className={`text-xs font-bold px-2 py-1 rounded-full ${
+                  revenueChangePercent >= 0
+                    ? "text-green-700 bg-green-50"
+                    : "text-red-700 bg-red-50"
+                }`}
+              >
+                {revenueChangePercent >= 0 ? "+" : ""}
+                {revenueChangePercent.toFixed(1)}%
+              </span>
+            )}
           </div>
           <h3 className="text-gray-500 text-sm font-medium mb-1">
             Today's Revenue
           </h3>
-          <p className="text-2xl font-bold text-[#121212]">₱ 14,350.00</p>
+          <p className="text-2xl font-bold text-[#121212]">
+            {formatMoney(todayRevenue)}
+          </p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100">
           <div className="flex justify-between items-start mb-4">
@@ -116,7 +147,7 @@ export default function DashboardView({
               </svg>
             </div>
             {lowStockAlerts.length > 0 && (
-              <span className="text-red-500 text-xs font-bold bg-red-50 px-2 py-1 rounded-full">
+              <span className="text-red-700 text-xs font-bold bg-red-50 px-2 py-1 rounded-full">
                 Action Req
               </span>
             )}
@@ -163,31 +194,37 @@ export default function DashboardView({
             </h3>
             <button
               onClick={() => onNavClick("orders")}
-              className="text-sm text-[#F17D0C] font-medium hover:underline"
+              className="text-sm text-[var(--color-brand-text)] font-medium hover:underline"
             >
               View All
             </button>
           </div>
-          <div className="p-0 flex-1 overflow-x-auto">
+          <div
+            className="p-0 flex-1 overflow-x-auto"
+            tabIndex={0}
+            role="region"
+            aria-label="Recent orders"
+          >
             <table className="w-full text-left border-collapse min-w-[500px]">
               <thead>
                 <tr className="bg-gray-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  <th className="px-5 py-3">Order #</th>
-                  <th className="px-5 py-3">Client</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Total</th>
+                  <th scope="col" className="px-5 py-3">Order #</th>
+                  <th scope="col" className="px-5 py-3">Client</th>
+                  <th scope="col" className="px-5 py-3">Status</th>
+                  <th scope="col" className="px-5 py-3 text-right">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
                 {orders.slice(0, 4).map((order) => (
-                  <tr
-                    key={order.id}
-                    className="hover:bg-orange-50/50 transition-colors cursor-pointer"
-                    onClick={() => onViewOrder(order)}
-                  >
-                    <td className="px-5 py-4 font-medium text-gray-900">
-                      {order.id}
-                    </td>
+                  <tr key={order.id} className="hover:bg-orange-50/50 transition-colors">
+                    <th scope="row" className="px-5 py-4 text-left font-medium text-gray-900">
+                      <Link
+                        to={orderPath(order.id)}
+                        className="rounded hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-text)]"
+                      >
+                        {order.id}
+                      </Link>
+                    </th>
                     <td className="px-5 py-4 text-gray-800">
                       {clients.find((c) => c.id === order.clientId)?.name || order.customerName || "—"}
                     </td>
@@ -195,7 +232,7 @@ export default function DashboardView({
                       <OrderStatusBadge status={order.status} />
                     </td>
                     <td className="px-5 py-4 font-medium text-gray-900 text-right">
-                      ₱{computeOrderTotal(order).toFixed(2)}
+                      {formatMoney(computeOrderTotal(order))}
                     </td>
                   </tr>
                 ))}
@@ -208,14 +245,19 @@ export default function DashboardView({
           <div className="p-5 border-b border-gray-100 flex justify-between items-center">
             <h3 className="text-lg font-bold text-[#121212] flex items-center">
               Inventory Alerts
-              <span className="ml-2 bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">
+              <span className="ml-2 bg-red-100 text-red-700 py-0.5 px-2 rounded-full text-xs">
                 {lowStockAlerts.length}
               </span>
             </h3>
           </div>
-          <div className="p-0 flex-1 overflow-y-auto max-h-[400px]">
+          <div
+            className="p-0 flex-1 overflow-y-auto max-h-[400px]"
+            tabIndex={0}
+            role="region"
+            aria-label="Inventory alerts"
+          >
             {lowStockAlerts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-10 text-gray-400">
+              <div className="flex flex-col items-center justify-center p-10 text-gray-500">
                 <svg
                   className="w-12 h-12 mb-3 text-green-200"
                   fill="none"
@@ -250,10 +292,10 @@ export default function DashboardView({
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <span className="font-bold text-red-600 block leading-tight">
+                        <span className="font-bold text-red-700 block leading-tight">
                           {item.qty} {item.unit || ""}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-500">
                           Target: {item.target}
                         </span>
                       </div>

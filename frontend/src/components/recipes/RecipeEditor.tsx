@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
+import SelectField from "../common/SelectField";
+import { formatMoney } from "../../utils/money";
 import { computeRecipeCost, suggestedPrice } from "../../utils/pricing";
-import NumericField from "../common/NumericField";
 import type { FormEvent } from "react";
 import type {
   IngredientStock,
@@ -21,9 +22,11 @@ const CATEGORY_OPTIONS: PosItemCategory[] = ["Pastries", "Bread", "Cakes", "Drin
 interface RecipeEditorProps {
   recipe: Recipe | null;
   ingredients: IngredientStock[];
+  /** The bill of materials needs an ingredient's identity, not its cost, so the cost panel is gated separately. */
+  canViewIngredientCosts: boolean;
   pricingRules: PricingRules;
   onCancel: () => void;
-  onSave: (recipe: RecipeInput) => Promise<void>;
+  onSave: (recipe: RecipeInput) => void;
 }
 
 /** Editor form state: numeric fields are raw strings while typing. */
@@ -35,8 +38,23 @@ type RecipeEditorForm = Omit<RecipeInput, "yieldQty" | "ingredients" | "price" |
   ingredients: Array<{ ingredientId: string; qty: string | number; unit: string }>;
 };
 
-export default function RecipeEditor({ recipe, ingredients, pricingRules, onCancel, onSave }: RecipeEditorProps) {
+export default function RecipeEditor({
+  recipe,
+  ingredients,
+  canViewIngredientCosts,
+  pricingRules,
+  onCancel,
+  onSave,
+}: RecipeEditorProps) {
   const isNew = !recipe;
+  const nameFieldId = useId();
+  const categoryFieldId = useId();
+  const priceFieldId = useId();
+  const qtyFieldId = useId();
+  const targetFieldId = useId();
+  const shelfLifeFieldId = useId();
+  const yieldQtyFieldId = useId();
+  const yieldUnitFieldId = useId();
   const [form, setForm] = useState<RecipeEditorForm>(() =>
     recipe
       ? { ...recipe, yieldQty: recipe.yieldQty ?? "", yieldUnit: recipe.yieldUnit ?? "pcs" }
@@ -99,10 +117,7 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
   } as Recipe;
   const { totalCost, costPerUnit } = computeRecipeCost(normalizedForCalc, ingredients);
 
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.category || form.price === "" || form.qty === "" || form.target === "" || !form.shelfLife) {
       return;
@@ -114,36 +129,28 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
     if (hasBom && (!form.yieldQty || !form.yieldUnit)) return;
     const hasYield = form.yieldQty !== "" && !!form.yieldUnit;
 
-    setError(null);
-    setSubmitting(true);
-    try {
-      await onSave({
-        id: form.id,
-        name: form.name,
-        type: "Menu Item",
-        category: form.category,
-        price: parseFloat(String(form.price)) || 0,
-        qty: parseFloat(String(form.qty)) || 0,
-        target: parseFloat(String(form.target)) || 0,
-        shelfLife: form.shelfLife,
-        yieldQty: hasYield ? parseFloat(String(form.yieldQty)) || 0 : undefined,
-        yieldUnit: hasYield ? form.yieldUnit : undefined,
-        ingredients: cleanIngredients,
-      });
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not save recipe.");
-    } finally {
-      setSubmitting(false);
-    }
+    onSave({
+      id: form.id,
+      name: form.name,
+      type: "Menu Item",
+      category: form.category,
+      price: parseFloat(String(form.price)) || 0,
+      qty: parseFloat(String(form.qty)) || 0,
+      target: parseFloat(String(form.target)) || 0,
+      shelfLife: form.shelfLife,
+      yieldQty: hasYield ? parseFloat(String(form.yieldQty)) || 0 : undefined,
+      yieldUnit: hasYield ? form.yieldUnit : undefined,
+      ingredients: cleanIngredients,
+    });
   };
 
   return (
     <div className="max-w-6xl mx-auto animate-fadeIn pb-10 w-full">
       <div className="flex items-center text-[15px] mb-6 text-gray-500 font-medium tracking-wide">
-        <button onClick={onCancel} className="hover:text-[#F17D0C] transition-colors">
+        <button onClick={onCancel} className="hover:text-[var(--color-brand-text)] transition-colors">
           Recipes
         </button>
-        <span className="mx-2 text-gray-400">&gt;</span>
+        <span className="mx-2 text-gray-500">&gt;</span>
         <span className="text-[#121212] font-bold">{isNew ? "New Recipe" : "Edit Recipe"}</span>
       </div>
 
@@ -154,81 +161,105 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
               <h3 className="text-lg font-bold text-[#121212] mb-4">Recipe Details</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Recipe Name</label>
+                  <label htmlFor={nameFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Recipe Name</label>
                   <input
+                    id={nameFieldId}
                     type="text"
                     value={form.name}
                     onChange={(e) => updateField("name", e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
-                  <select
+                  <label htmlFor={categoryFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Category</label>
+                  <SelectField
+                    id={categoryFieldId}
                     value={form.category}
                     onChange={(e) => updateCategory(e.target.value as PosItemCategory)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                    className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                   >
                     {CATEGORY_OPTIONS.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                 </div>
                 <div>
-                  <NumericField
-                    label="Price (₱)"
-                    value={String(form.price)}
-                    onChange={(v) => updateField("price", v)}
+                  <label htmlFor={priceFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Price</label>
+                  <input
+                    id={priceFieldId}
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={form.price}
+                    onChange={(e) => updateField("price", e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                     required
                   />
                 </div>
                 <div>
-                  <NumericField
-                    label="Initial Qty on Hand"
-                    value={String(form.qty)}
-                    onChange={(v) => updateField("qty", v)}
+                  <label htmlFor={qtyFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Initial Qty on Hand</label>
+                  <input
+                    id={qtyFieldId}
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={form.qty}
+                    onChange={(e) => updateField("qty", e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                     required
                   />
                 </div>
                 <div>
-                  <NumericField
-                    label="Target Stock"
-                    value={String(form.target)}
-                    onChange={(v) => updateField("target", v)}
+                  <label htmlFor={targetFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Target Stock</label>
+                  <input
+                    id={targetFieldId}
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={form.target}
+                    onChange={(e) => updateField("target", e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                     required
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Shelf Life</label>
+                  <label htmlFor={shelfLifeFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Shelf Life</label>
                   <input
+                    id={shelfLifeFieldId}
                     type="text"
                     placeholder="e.g. 24 Hours"
                     value={form.shelfLife}
                     onChange={(e) => updateField("shelfLife", e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                     required
                   />
                 </div>
                 <div className="sm:col-span-2 grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Yield Qty <span className="text-gray-400 font-normal">(if made in batches)</span>
+                    <label htmlFor={yieldQtyFieldId} className="block text-sm font-semibold text-gray-700 mb-1">
+                      Yield Qty <span className="text-gray-500 font-normal">(if made in batches)</span>
                     </label>
-                    <NumericField
-                      value={String(form.yieldQty)}
-                      onChange={(v) => updateField("yieldQty", v)}
+                    <input
+                      id={yieldQtyFieldId}
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={form.yieldQty}
+                      onChange={(e) => updateField("yieldQty", e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Yield Unit</label>
+                    <label htmlFor={yieldUnitFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Yield Unit</label>
                     <input
+                      id={yieldUnitFieldId}
                       type="text"
                       value={form.yieldUnit}
                       onChange={(e) => updateField("yieldUnit", e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                     />
                   </div>
                 </div>
@@ -239,14 +270,14 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h3 className="text-lg font-bold text-[#121212]">Ingredients (per batch)</h3>
-                  <p className="text-xs text-gray-400 font-medium mt-0.5">
+                  <p className="text-xs text-gray-500 font-medium mt-0.5">
                     Optional — leave empty for simple items with no BOM.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={addLine}
-                  className="text-sm font-bold text-[#F17D0C] hover:underline"
+                  className="text-sm font-bold text-[var(--color-brand-text)] hover:underline"
                 >
                   + Add Ingredient
                 </button>
@@ -256,14 +287,16 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
                   const ingredient = ingredients.find((i) => i.id === line.ingredientId);
                   return (
                     <div key={idx} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                      <select
+                      <SelectField
                         value={line.ingredientId}
                         onChange={(e) => {
                           const selected = ingredients.find((i) => i.id === e.target.value);
                           updateLine(idx, "ingredientId", e.target.value);
                           if (selected) updateLine(idx, "unit", selected.unit);
                         }}
-                        className="flex-1 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+                        aria-label={`Ingredient ${idx + 1}`}
+                        wrapperClassName="flex-1 w-full"
+                        className="w-full pl-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                       >
                         <option value="">Select ingredient...</option>
                         {ingredients.map((i) => (
@@ -271,12 +304,16 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
                             {i.name}
                           </option>
                         ))}
-                      </select>
-                      <NumericField
+                      </SelectField>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
                         placeholder="Qty"
-                        value={String(line.qty)}
-                        onChange={(v) => updateLine(idx, "qty", v)}
-                        className="w-full sm:w-28"
+                        aria-label={`Quantity for ingredient ${idx + 1}`}
+                        value={line.qty}
+                        onChange={(e) => updateLine(idx, "qty", e.target.value)}
+                        className="w-full sm:w-28 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                       />
                       <span className="w-16 text-sm text-gray-500 font-medium">
                         {ingredient?.unit || line.unit || ""}
@@ -284,10 +321,11 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
                       <button
                         type="button"
                         onClick={() => removeLine(idx)}
-                        className="text-gray-400 hover:text-red-500 p-2 transition-colors"
+                        className="text-gray-500 hover:text-red-500 p-2 transition-colors"
                         title="Remove"
+                        aria-label={`Remove ingredient ${idx + 1}`}
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -303,57 +341,61 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
             </div>
           </div>
 
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sticky top-4">
-              <h3 className="text-lg font-bold text-[#121212] mb-4">Live Cost Summary</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between text-gray-600 font-medium">
-                  <span>Total Batch Cost</span>
-                  <span className="text-gray-900">₱{totalCost.toFixed(2)}</span>
+          <div className="lg:col-span-1 flex flex-col gap-6 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)]">
+            {/* Both figures in this card come from ingredient unit costs. */}
+            {canViewIngredientCosts && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 lg:min-h-0 lg:overflow-y-auto">
+                <h3 className="text-lg font-bold text-[#121212] mb-4">Live Cost Summary</h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>Total Batch Cost</span>
+                    <span className="text-gray-900">{formatMoney(totalCost)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 font-medium border-b border-gray-200 pb-3">
+                    <span>Cost per Unit</span>
+                    <span className="text-gray-900">{formatMoney(costPerUnit)}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-gray-600 font-medium border-b border-gray-200 pb-3">
-                  <span>Cost per Unit</span>
-                  <span className="text-gray-900">₱{costPerUnit.toFixed(2)}</span>
-                </div>
-              </div>
 
-              <div className="mt-5 pt-5 border-t border-gray-200">
-                <h4 className="text-sm font-bold text-[#121212] mb-3">
-                  Suggested Prices <span className="text-gray-400 font-normal">(customizable margin)</span>
-                </h4>
-                <div className="space-y-3">
-                  {marginTiers.map((margin, idx) => {
-                    const tierPrice = suggestedPrice(costPerUnit, margin);
-                    return (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between gap-3 bg-[#FDF9F3] border border-[#F3B978]/60 rounded-lg px-3 py-2.5"
-                      >
-                        <div>
-                          <p className="text-xs font-bold text-[#562D07]/70 uppercase tracking-wide">
-                            {TIER_LABELS[idx]}
-                          </p>
-                          <div className="flex items-center gap-1 mt-1">
-                            <NumericField
-                              value={String(margin)}
-                              onChange={(v) => updateMarginTier(idx, v)}
-                              className="w-14 px-1.5 py-1 text-xs text-right"
-                            />
-                            <span className="text-xs text-gray-500 font-medium">% margin</span>
+                <div className="mt-5 pt-5 border-t border-gray-200">
+                  <h4 className="text-sm font-bold text-[#121212] mb-3">
+                    Suggested Prices <span className="text-gray-500 font-normal">(customizable margin)</span>
+                  </h4>
+                  <div className="space-y-3">
+                    {marginTiers.map((margin, idx) => {
+                      const tierPrice = suggestedPrice(costPerUnit, margin);
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between gap-3 bg-[#FDF9F3] border border-[#F3B978]/60 rounded-lg px-3 py-2.5"
+                        >
+                          <div>
+                            <p className="text-xs font-bold text-[#562D07]/70 uppercase tracking-wide">
+                              {TIER_LABELS[idx]}
+                            </p>
+                            <div className="flex items-center gap-1 mt-1">
+                              <input
+                                type="number"
+                                min="0"
+                                max="95"
+                                aria-label={`${TIER_LABELS[idx]} margin percent`}
+                                value={margin}
+                                onChange={(e) => updateMarginTier(idx, e.target.value)}
+                                className="w-14 px-1.5 py-1 border border-gray-300 rounded text-xs font-bold text-gray-800 text-right focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none"
+                              />
+                              <span className="text-xs text-gray-500 font-medium">% margin</span>
+                            </div>
                           </div>
+                          <span className="text-lg font-bold text-[var(--color-brand-text)]">{formatMoney(tierPrice)}</span>
                         </div>
-                        <span className="text-lg font-bold text-[#F17D0C]">₱{tierPrice.toFixed(2)}</span>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {error && (
-              <p className="text-sm font-semibold text-red-600">{error}</p>
             )}
-            <div className="flex gap-3">
+
+            <div className="flex gap-3 lg:shrink-0">
               <button
                 type="button"
                 onClick={onCancel}
@@ -363,10 +405,9 @@ export default function RecipeEditor({ recipe, ingredients, pricingRules, onCanc
               </button>
               <button
                 type="submit"
-                disabled={submitting}
-                className="flex-1 py-3 rounded-xl text-white font-bold bg-[#562D07] hover:bg-[#3a1d04] transition-colors disabled:opacity-60"
+                className="flex-1 py-3 rounded-xl text-white font-bold bg-[#562D07] hover:bg-[#3a1d04] transition-colors"
               >
-                {submitting ? "Saving..." : "Save Recipe"}
+                Save Recipe
               </button>
             </div>
           </div>

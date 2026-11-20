@@ -6,8 +6,6 @@
  */
 
 // ---------- IDs ----------
-export type AppView = "reids" | "chams";
-
 export type ClientId = string;
 export type OrderId = string;
 export type MenuItemId = string;
@@ -41,7 +39,7 @@ export type InventoryItemCategory = "menu" | "ingredient";
 export type RestockCategory = InventoryItemCategory;
 /** Display type stored on stock item records. */
 export type StockItemType = "Menu Item" | "Ingredient";
-export type SaleType = "Walk-in" | "Pre-Order";
+export type SaleType = "Walk-in" | "Order";
 export type ProductionRunStatus = "scheduled" | "completed";
 export type CountStatus = "pending" | "resolved";
 export type CountResolution = "match" | "applied" | "dismissed";
@@ -124,6 +122,8 @@ export interface Order {
   clientId: ClientId | null;
   /** Present on pre-orders created from the POS. */
   customerName?: string;
+  /** Present on POS-created orders or manual edits of walk-in orders. */
+  customerContact?: string;
   items: OrderItem[];
   requestedDate: ISODate;
   status: OrderStatus;
@@ -134,7 +134,12 @@ export interface Order {
   deliveredAt: ISODate | null;
   paymentMethod: PaymentMethod | null;
   amountPaid: number;
+  /** Appended by editOrder; absent until the order is edited. */
+  editHistory?: EditHistoryEntry[];
 }
+
+/** Order fields before useOrders mints the id (utils/checkout.buildOrderFromSale). */
+export type OrderDraft = Omit<Order, "id">;
 
 /** Payload of the create-order modal (CreateOrderModal). */
 export interface CreateOrderData {
@@ -156,52 +161,95 @@ export interface OrderDeliveryInput {
   assignedTo: string;
 }
 
+/** Payload of the edit-order modal (EditOrderModal). */
+export interface EditOrderInput {
+  customerName: string;
+  customerContact: string;
+  items: OrderItem[];
+  /** Renders one line in the history summary; names are resolved by the caller. */
+  describeItem: (line: OrderItem) => string;
+}
+
+// ---------- Edit history ----------
+/** One changed field captured when an order or sale is edited. */
+export interface FieldEdit {
+  field: string;
+  label: string;
+  from: string;
+  to: string;
+}
+
+/** One save action in an edited record's history. */
+export interface EditHistoryEntry {
+  id: string;
+  at: ISODateTime;
+  userName: string;
+  changes: FieldEdit[];
+}
+
 // ---------- POS / sales ----------
-export interface PosProduct {
-  id: MenuItemId;
-  name: string;
-  price: Price;
-  category: string;
-  unit: string;
-  availableStock: Quantity;
-  color: string;
-}
+/** POS card projection of a catalogue item (utils/catalogue.toPosProducts). */
+export type PosProduct = Pick<CatalogueItem, "id" | "name" | "price" | "category" | "color">;
 
-export interface CartItem extends PosProduct {
-  qty: Quantity;
-}
+export type CartItem = PosProduct & { qty: Quantity };
 
-export interface SaleItem {
-  id: MenuItemId;
+/** Customer attached to the open POS ticket. Its details prefill the confirm modal. */
+export interface TicketCustomer {
   name: string;
-  qty: Quantity;
-  price: Price;
-  unit: string;
-  lineTotal: number;
+  contact: string;
 }
 
 export interface Sale {
   id: SaleId;
+  /** Set on Order-type sales: the order that owns customer/item edits. */
+  orderId?: OrderId;
   type: SaleType;
-  status: string;
   customerName: string;
   customerContact: string;
   paymentMethod: PaymentMethod;
-  paymentReference: string;
-  items: SaleItem[];
+  items: CartItem[];
   subtotal: number;
-  discount: number;
-  taxRate: number | null;
-  tax: number | null;
+  tax: number;
   total: number;
-  deliveryDate: ISODate | null;
+  deliveryDate: ISODate;
   notes: string;
-  createdAt: ISODateTime | null;
+  createdAt: ISODateTime;
+  /** Appended by editSale; absent until the sale is edited. */
+  editHistory?: EditHistoryEntry[];
+}
+
+/** Payload of the edit-sale modal (EditSaleModal). */
+export interface EditSaleInput {
+  customerName: string;
+  customerContact: string;
+  items: CartItem[];
+}
+
+/** A reason a checkout cannot be confirmed (utils/checkout). */
+export type CheckoutError =
+  | "customer-name"
+  | "customer-contact"
+  | "payment-method"
+  | "delivery-date";
+
+/** Result of the single checkout rule (utils/checkout). */
+export interface CheckoutValidation {
+  isValid: boolean;
+  errors: CheckoutError[];
+}
+
+/** Money owed for one sale's lines (utils/checkout). */
+export interface SaleTotals {
+  subtotal: number;
+  tax: number;
+  total: number;
 }
 
 /** State of the order confirmation modal (OrderConfirmationModal). */
 export interface ConfirmModalState {
   isOpen: boolean;
+  /** Walk-in completes at the counter; Order is tracked in Orders with a delivery date. */
+  saleType: SaleType;
   paymentMethod: PaymentMethodInput;
   customerName: string;
   customerContact: string;
@@ -221,6 +269,14 @@ export interface Recipe extends MenuItemStock {
   yieldQty?: number;
   yieldUnit?: string;
   ingredients: RecipeIngredientLine[];
+}
+
+/** One catalogue record per menu item: the recipe detail plus its POS presentation. */
+export interface CatalogueItem extends Recipe {
+  /** Tailwind background class for the POS card swatch. */
+  color: string;
+  /** Untracked items (drinks and other POS-only goods) skip every stock movement. */
+  trackedStock: boolean;
 }
 
 /** Payload of the recipe editor; id is null when creating a new recipe. */
@@ -307,19 +363,23 @@ export interface DayClosing {
 export type DayClosingData = Omit<DayClosing, "id" | "closedAt">;
 
 // ---------- Users / Auth ----------
-/** Role names as seeded server-side (apps/accounts/migrations/0003_seed_roles_and_permissions.py). */
-export type UserRole = "Owner" | "Admin" | "Staff";
+export type UserRole =
+  | "cashier"
+  | "sales_marketing"
+  | "research_development"
+  | "kitchen"
+  | "admin"
+  | "super_admin";
 
-/**
- * The signed-in user. Never carries a password or hash — the backend never
- * sends one, and authentication is a server-side session (see useAuth).
- */
 export interface User {
   id: UserId;
   name: string;
   email: string;
+  /** Demo fixtures only (src/data/initialUsers). The backend never sends a hash. */
+  passwordHash?: string;
   role: UserRole;
-  isSuperuser: boolean;
+  active: boolean;
+  createdAt: ISODateTime;
 }
 
 /** Payload of the login form (LoginPage). */
@@ -328,32 +388,57 @@ export interface LoginCredentials {
   password: string;
 }
 
-// ---------- Accounts management (FR-3.10.1) ----------
-export interface Account {
-  id: UserId;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  roleId: number;
-  roleName: UserRole;
-  active: boolean;
-}
+// ---------- Audit log ----------
+export type AuditLogId = string;
 
-/** Payload of the account editor; password is required only when creating. */
-export interface AccountInput {
-  id: UserId | null;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  roleId: number | "";
-  password: string;
-}
+/** Discrete action types the app instruments. Extend as new mutating actions are added. */
+export type AuditActionType =
+  | "auth.login.success"
+  | "auth.login.failure"
+  | "auth.login.lockout"
+  | "auth.logout"
+  | "user.created"
+  | "user.role_changed"
+  | "user.deactivated"
+  | "user.reactivated"
+  | "sale.completed"
+  | "sale.edited"
+  | "order.created"
+  | "order.edited"
+  | "order.payment_recorded"
+  | "order.status_advanced"
+  | "order.delivery_scheduled"
+  | "order.delivered"
+  | "inventory.ingredient_added"
+  | "inventory.ingredient_updated"
+  | "inventory.restocked"
+  | "inventory.count_submitted"
+  | "inventory.count_resolved"
+  | "inventory.reconciliation_applied"
+  | "production.run_scheduled"
+  | "production.run_completed"
+  | "production.run_deleted"
+  | "client.created"
+  | "client.updated"
+  | "recipe.saved"
+  | "recipe.pricing_rule_updated"
+  | "closing.day_closed"
+  | "closing.expense_added"
+  | "closing.expense_deleted";
 
-export interface AccountRole {
-  id: number;
-  name: UserRole;
+export interface AuditLogEntry {
+  id: AuditLogId;
+  timestamp: ISODateTime;
+  /** null for pre-auth events where no valid account was matched (e.g. failed login on unknown email). */
+  userId: UserId | null;
+  /** Display name, or the raw attempted email for failed logins. */
+  userName: string;
+  userRole: UserRole | null;
+  action: AuditActionType;
+  entityType?: string;
+  entityId?: string;
+  /** Short human-readable summary shown in the Audit Logs table. */
+  details?: string;
 }
 
 // ---------- Navigation ----------
@@ -372,18 +457,10 @@ export type NavTabId =
   | "reports-dashboard"
   | "reports-closing"
   | "reports-inventory"
-  | "accounts";
+  | "audit-logs"
+  | "user-management";
 
 // ---------- Derived / computed values (utils) ----------
-/** Tabs rendered by the inventory feature view. */
-export type InventoryTabId =
-  | "inventory"
-  | "inventory-closing-count"
-  | "inventory-reconciliation";
-
-/** Tabs rendered by the reports feature view. */
-export type ReportsTabId = "reports-dashboard" | "reports-closing" | "reports-inventory";
-
 /** Stock level classification (utils/stock). */
 export type StockStatus = "out" | "low" | "ok";
 
@@ -571,7 +648,7 @@ export interface LedgerRow {
   restocked: number;
   spoilage: number;
   sold: number;
-  profit: number;
+  revenue: number;
   remainingCalculated: number;
   remainingReported: number | null;
   discrepancy: number | null;

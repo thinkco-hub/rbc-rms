@@ -1,14 +1,13 @@
-import React, { useState } from "react";
-import NumericField from "../common/NumericField";
+import React, { useId, useState } from "react";
+import Modal from "../common/Modal";
 import InventoryStatsBar from "./InventoryStatsBar";
 import StockStatusBadge from "./StockStatusBadge";
-import { SearchIcon } from "../icons";
-import { groupByStatus, getStockStatus, STOCK_STATUS_LABELS } from "../../utils/stock";
+import SearchField from "../common/SearchField";
+import { formatMoney } from "../../utils/money";
+import { STOCK_STATUS_LABELS } from "../../utils/status";
+import { groupByStatus, getStockStatus } from "../../utils/stock";
 import type { FormEvent } from "react";
 import type { IngredientFormData, IngredientStock, StockStatus } from "../../types/domain";
-
-/** Selectable units for raw material quantities. */
-const UNIT_OPTIONS = ["kg", "g", "L", "mL", "pcs", "pack", "dozen", "box"];
 
 /** Ingredient form state: numeric fields are raw strings while typing. */
 type IngredientFormState = Omit<IngredientFormData, "qty" | "target" | "unitCost"> & {
@@ -48,6 +47,13 @@ function IngredientFormModal({
 
   const update = (field: keyof IngredientFormState, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+  const headingId = useId();
+  const nameFieldId = useId();
+  const qtyFieldId = useId();
+  const unitFieldId = useId();
+  const targetFieldId = useId();
+  const unitCostFieldId = useId();
+  const supplierFieldId = useId();
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -62,81 +68,97 @@ function IngredientFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md animate-fadeIn"
-      >
-        <h2 className="text-2xl font-bold text-[#121212] mb-6">
+    <Modal
+      labelledBy={headingId}
+      onClose={onClose}
+      overlayClassName="z-[100] bg-black/50 backdrop-blur-sm px-4"
+      className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-md animate-fadeIn"
+    >
+      <form onSubmit={handleSubmit}>
+        <h2 id={headingId} className="text-2xl font-bold text-[#121212] mb-6">
           {initial ? "Edit Ingredient" : "Add Ingredient"}
         </h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Name</label>
+            <label htmlFor={nameFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Name</label>
             <input
+              id={nameFieldId}
               type="text"
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               required
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <NumericField
-                label="Qty in Stock"
+              <label htmlFor={qtyFieldId} className="block text-sm font-semibold text-gray-700 mb-1">
+                Qty in Stock
+              </label>
+              <input
+                id={qtyFieldId}
+                type="number"
+                min="0"
+                step="any"
                 value={form.qty}
-                onChange={(v) => update("qty", v)}
+                onChange={(e) => update("qty", e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Unit</label>
-              <select
+              <label htmlFor={unitFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Unit</label>
+              <input
+                id={unitFieldId}
+                type="text"
+                placeholder="kg, Liters..."
                 value={form.unit}
                 onChange={(e) => update("unit", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800 bg-white"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                 required
-              >
-                <option value="" disabled>
-                  Select unit
-                </option>
-                {(form.unit && !UNIT_OPTIONS.includes(form.unit)
-                  ? [form.unit, ...UNIT_OPTIONS]
-                  : UNIT_OPTIONS
-                ).map((unit) => (
-                  <option key={unit} value={unit}>
-                    {unit}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <NumericField
-                label="Reorder Threshold"
+              <label htmlFor={targetFieldId} className="block text-sm font-semibold text-gray-700 mb-1">
+                Reorder Threshold
+              </label>
+              <input
+                id={targetFieldId}
+                type="number"
+                min="0"
+                step="any"
                 value={form.target}
-                onChange={(v) => update("target", v)}
+                onChange={(e) => update("target", e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
                 required
               />
             </div>
             <div>
-              <NumericField
-                label="Unit Cost (₱)"
+              <label htmlFor={unitCostFieldId} className="block text-sm font-semibold text-gray-700 mb-1">
+                Unit Cost
+              </label>
+              <input
+                id={unitCostFieldId}
+                type="number"
+                min="0"
+                step="any"
                 value={form.unitCost}
-                onChange={(v) => update("unitCost", v)}
+                onChange={(e) => update("unitCost", e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Supplier</label>
+            <label htmlFor={supplierFieldId} className="block text-sm font-semibold text-gray-700 mb-1">Supplier</label>
             <input
+              id={supplierFieldId}
               type="text"
               value={form.supplier}
               onChange={(e) => update("supplier", e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F17D0C] focus:border-[#F17D0C] outline-none text-gray-800"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-text)] focus:border-[var(--color-brand-text)] outline-none text-gray-800"
             />
           </div>
         </div>
@@ -157,7 +179,7 @@ function IngredientFormModal({
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
 
@@ -222,18 +244,12 @@ export default function RawMaterialsTable({ ingredients, onRestock, onAdd, onUpd
       <InventoryStatsBar items={ingredients} activeFilter={statusFilter} onFilterChange={setStatusFilter} />
 
       <div className="bg-white border border-gray-200 rounded-lg p-2 mb-4 shadow-sm flex">
-        <div className="relative flex-1 w-full">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <SearchIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border-none focus:ring-0 text-sm text-gray-900 placeholder-gray-400 bg-transparent outline-none"
-            placeholder="Search ingredients by name or ID..."
-          />
-        </div>
+        <SearchField
+          value={search}
+          onChange={setSearch}
+          ariaLabel="Search ingredients by name or ID"
+          placeholder="Search ingredients by name or ID..."
+        />
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-[#F3B978] mb-6 md:mb-8 overflow-hidden w-full">
@@ -279,14 +295,14 @@ export default function RawMaterialsTable({ ingredients, onRestock, onAdd, onUpd
                         <td className="px-4 md:px-6 py-4 font-semibold text-[#121212]">{item.name}</td>
                         <td className="px-4 md:px-6 py-4 text-sm text-[#562D07]/70 font-medium">{item.id}</td>
                         <td className="px-4 md:px-6 py-4 font-bold text-[#121212] text-lg">
-                          {item.qty} <span className="text-xs font-medium text-gray-400">{item.unit}</span>
+                          {item.qty} <span className="text-xs font-medium text-gray-500">{item.unit}</span>
                         </td>
                         <td className="px-4 md:px-6 py-4 text-sm text-[#562D07]/70 font-medium">
                           {item.target} {item.unit}
                         </td>
                         <td className="px-4 md:px-6 py-4 text-sm text-gray-600">{item.supplier || "—"}</td>
                         <td className="px-4 md:px-6 py-4 text-sm text-gray-800 font-medium">
-                          ₱{Number(item.unitCost || 0).toFixed(2)}
+                          {formatMoney(Number(item.unitCost || 0))}
                         </td>
                         <td className="px-4 md:px-6 py-4">
                           <StockStatusBadge item={item} />
@@ -294,13 +310,15 @@ export default function RawMaterialsTable({ ingredients, onRestock, onAdd, onUpd
                         <td className="px-4 md:px-6 py-4 text-center whitespace-nowrap">
                           <button
                             onClick={() => setModalState({ isOpen: true, editing: item })}
+                            aria-label={`Edit ${item.name}`}
                             className="text-gray-500 hover:bg-gray-100 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => onRestock(item.id)}
-                            className="text-[#F17D0C] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
+                            aria-label={`Restock ${item.name}`}
+                            className="text-[var(--color-brand-text)] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
                           >
                             + Restock
                           </button>

@@ -1,5 +1,10 @@
 import React, { useState } from "react";
 import { discrepancyLabel } from "../../utils/counts";
+import {
+  COUNT_RESOLUTION_LABELS,
+  COUNT_STATUS_BADGE_CLASSES,
+  COUNT_STATUS_LABELS,
+} from "../../utils/status";
 import type {
   CountResolutionAction,
   IngredientStock,
@@ -139,19 +144,25 @@ export default function ReconciliationReview({
                     <td className="px-6 py-4 text-right text-gray-600">{c.countedQty}</td>
                     <td
                       className={`px-6 py-4 text-right font-bold ${
-                        c.discrepancy === 0 ? "text-gray-400" : c.discrepancy > 0 ? "text-green-600" : "text-red-600"
+                        c.discrepancy === 0 ? "text-gray-500" : c.discrepancy > 0 ? "text-green-700" : "text-red-700"
                       }`}
                     >
                       {discrepancyLabel(c.discrepancy)}
                     </td>
                     <td className="px-6 py-4 text-gray-600">
                       {c.status === "pending" ? (
-                        <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-                          Pending
+                        <span
+                          className={`text-xs font-bold px-2 py-1 rounded-full ${COUNT_STATUS_BADGE_CLASSES.pending}`}
+                        >
+                          {COUNT_STATUS_LABELS.pending}
                         </span>
                       ) : (
-                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full capitalize">
-                          {c.resolution}
+                        <span
+                          className={`text-xs font-bold px-2 py-1 rounded-full ${COUNT_STATUS_BADGE_CLASSES.resolved}`}
+                        >
+                          {c.resolution
+                            ? COUNT_RESOLUTION_LABELS[c.resolution]
+                            : COUNT_STATUS_LABELS.resolved}
                         </span>
                       )}
                     </td>
@@ -160,21 +171,23 @@ export default function ReconciliationReview({
                         <>
                           <button
                             onClick={() => onResolve(c.id, "apply")}
-                            className="text-[#F17D0C] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
+                            className="text-[var(--color-brand-text)] hover:bg-orange-50 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
                             title="Adjust system stock to match the counted quantity"
+                            aria-label={`Apply counted quantity for ${itemName(c)}`}
                           >
                             Apply
                           </button>
                           <button
                             onClick={() => onResolve(c.id, "dismiss")}
-                            className="text-gray-400 hover:bg-gray-100 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
+                            className="text-gray-500 hover:bg-gray-100 font-semibold px-3 py-1.5 rounded-md transition-colors text-sm"
                             title="Keep system stock as-is, discard this count"
+                            aria-label={`Dismiss count for ${itemName(c)}`}
                           >
                             Dismiss
                           </button>
                         </>
                       ) : (
-                        <span className="text-gray-300">—</span>
+                        <span className="text-gray-500">—</span>
                       )}
                     </td>
                   </tr>
